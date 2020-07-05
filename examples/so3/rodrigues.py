@@ -28,9 +28,10 @@ def rodrigues(K):
     norm = np.linalg.norm(np.sqrt(0.5)*K)
     half_norm = 0.5*norm
     exp = Id + np.sin(norm) / norm * K + 0.5*(np.sin(half_norm) / half_norm)**2*Ksq
-    return lax.cond(norm > 1e-14,
-                    True, lambda _: exp,
-                    False, lambda _: Id)
+    return lax.cond(norm > 1e-10,
+                    lambda _: exp,
+                    lambda _: Id,
+                    None)
 
 def irodrigues(R, S):
     """This function is based on, but is not equivalent to, the discussion at [1].
@@ -42,7 +43,14 @@ def irodrigues(R, S):
     xi = tn * np.array([U[0, 1] - U[1, 0],
                         U[0, 2] - U[2, 0],
                         U[1, 2] - U[2, 1]]) / (np.sqrt(2.)*np.sin(tn))
-    return euclid2skew(xi)
+    return lax.cond(np.linalg.norm(R-S) < 1e-10,
+                    lambda _: np.zeros_like(U),
+                    lambda _: euclid2skew(xi),
+                    None)
+
+def retract(v):
+    Id = np.eye(v.size)
+    return skew2euclid(irodrigues(Id, rodrigues(euclid2skew(v))))
 
 def rotdist(R, S):
     return np.linalg.norm(irodrigues(R, S))
