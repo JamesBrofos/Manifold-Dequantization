@@ -18,29 +18,21 @@ def shift_and_log_scale_fn(params, x):
     o = h@W2 + b2
     return np.hsplit(o, 2)
 
-def forward(params, flip, x):
+def forward(params, x):
     """RealNVP forward transformation."""
     d = x.shape[-1] // 2
     x1, x2 = x[:, :d], x[:, d:]
-    if flip:
-        x2, x1 = x1, x2
     shift, log_scale = shift_and_log_scale_fn(params, x1)
     y2 = x2 * np.exp(log_scale) + shift
-    if flip:
-        x1, y2 = y2, x1
     y = np.concatenate([x1, y2], axis=-1)
     return y
 
-def inverse(params, flip, y):
+def inverse(params, y):
     """RealNVP inverse transformation."""
     d = y.shape[-1] // 2
     y1, y2 = y[:, :d], y[:, d:]
-    if flip:
-        y1, y2 = y2, y1
     shift, log_scale = shift_and_log_scale_fn(params, y1)
     x2 = (y2 - shift) * np.exp(-log_scale)
-    if flip:
-        y1, x2 = x2, y1
     x = np.concatenate([y1, x2], axis=-1)
     return x, log_scale
 
@@ -61,24 +53,21 @@ def init_nvp_flow(rng, num_dims, num_hidden, dtype):
 
 def init_nvp_chain(rng, num_chains, num_dims, num_hidden, dtype):
     """Initialize a chain of RealNVP transformations. Each transformation depends
-    on the parameters of the underlying the neural network and the decision to
-    flip the order of the variables.
+    on the parameters of the underlying the neural network.
 
     """
     params = []
     for i in range(num_chains):
         p = init_nvp_flow(random.fold_in(rng, i), num_dims, num_hidden, dtype)
-        # Flip on odd number chain links.
-        flip = i % 2 == 1
         params.append(p)
     return params
 
-def ambient_nvp_flow_log_density(params, flip, base_log_prob_fn, y):
+def ambient_nvp_flow_log_density(params, base_log_prob_fn, y):
     """Log-density computed from the change-of-variables formula for the RealNVP
     transformation.
 
     """
-    x, log_scale = inverse(params, flip, y)
+    x, log_scale = inverse(params, y)
     ildj = -np.sum(log_scale, axis=-1)
     return base_log_prob_fn(x) + ildj
 
@@ -89,8 +78,10 @@ def ambient_nvp_chain_log_density(params, y):
     """
     log_prob_fn = lambda x: spst.norm.logpdf(x, 0., 1.).sum(-1)
     for i, p in enumerate(params):
-        flip = i % 2 == 1
-        log_prob_fn = log_prob_fn_factory(p, flip, log_prob_fn)
+        perm = random.permutation(random.PRNGKey(i), y.shape[-1])
+        iperm = np.argsort(perm)
+        log_prob_fn = log_prob_fn_factory(p, log_prob_fn)
+        log_prob_fn = permutation_factory(log_prob_fn, iperm)
     return log_prob_fn(y)
 
 def ambient_nvp_chain_density(params, y):
@@ -109,16 +100,22 @@ def ambient_nvp_chain_sample(rng, params, shape):
     base_sample_fn = lambda rng, shape: random.normal(rng, shape)
     x = base_sample_fn(rng, shape)
     for i, p in enumerate(params):
-        flip = i % 2 == 1
-        x = forward(p, flip, x)
+        perm = random.permutation(random.PRNGKey(i), x.shape[-1])
+        x = forward(p, x)
+        x = x[..., perm]
     return x
 
-def log_prob_fn_factory(params, flip, log_prob_fn):
+def log_prob_fn_factory(params, log_prob_fn):
     """Returns a function that computes the log-density of the RealNVP
     transformation given a log-density function for the base distribution.
 
     """
-    return lambda x: ambient_nvp_flow_log_density(
-        params, flip, log_prob_fn, x)
+    return lambda x: ambient_nvp_flow_log_density(params, log_prob_fn, x)
 
+def permutation_factory(log_prob_fn, iperm):
+    """Under a permutation of the variables, the log-density is the original
+    log-density evaluated at the un-permutated variables. Notice that
+    permutation is a volume-preserving operation.
 
+    """
+    return lambda y: log_prob_fn(y[..., iperm])
