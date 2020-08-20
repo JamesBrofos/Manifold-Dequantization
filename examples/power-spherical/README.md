@@ -13,15 +13,15 @@ For distributions on spheres, a natural projection from the ambient space to the
 
 The first check is that the ELBO increases as we optimize the parameters of the log-normal dequantizing distribution. This indeed appears to be the case.
 
-![ELBO Maximization](/images/elbo-maximization.png)
+![ELBO Maximization](images/elbo-maximization.png)
 
 Once the dequantizing distribution has been trained, we can train an ambient normalizing flow in order to do density estimation in the ambient space. Here are the results of using the trained dequantizing distribution and estimating an ambient normalizing flow (using RealNVP), and projecting samples of the ambient density back onto the sphere; the normalizing flow is trained using one-thousand gradient ascent iterations on the log-likelihood.
 
-![Dequantization Sampling](/images/power-spherical-samples-num-dequantization-steps-1000.png)
+![Dequantization Sampling](images/power-spherical-samples-num-dequantization-steps-1000.png)
 
 Visually, the projected ambient samples (orange) look like a good match to actual samples from a power spherical distribution. Does training the dequantization distribution to maximize the ELBO matter? Here is the same figure but in the case where no attempt is made to optimize the parameters of the log-normal dequantizing distribution.
 
-![No Elbo Optimization](/images/power-spherical-samples-num-dequantization-steps-0.png)
+![No Elbo Optimization](images/power-spherical-samples-num-dequantization-steps-0.png)
 
 Apparently, the match between the power spherical distribution and projected ambient samples is degraded in this situation. Still, the projected samples aren't absolutely terrible; this suggests to me that the RealNVP ambient flow may be the more important component than maximizing the ELBO.
 
