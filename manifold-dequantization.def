@@ -2,7 +2,7 @@ Bootstrap: docker
 From: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
 
 %environment
-    export PYTHONPATH=/path/to/Lie-Stein:$PYTHONPATH
+    export PYTHONPATH=/path/to/Manifold-Dequantization:$PYTHONPATH
 
 %post
     apt-get update -y && \

@@ -4,7 +4,7 @@ We investigate dequantization as a method for matching distributions on manifold
 
 ## Computational Environment
 
-We use Singularity to manage our computational environment. The definition file for our Singularity container can be found in `lie-stein.def`. To build the Singularity container itself, you may wish to use the [Singularity remote builder](https://cloud.sylabs.io/builder):
+We use Singularity to manage our computational environment. The definition file for our Singularity container can be found in `manifold-dequantization.def `. To build the Singularity container itself, you may wish to use the [Singularity remote builder](https://cloud.sylabs.io/builder):
 ```
-singularity build --remote lie-stein.sif lie-stein.def
+singularity build --remote manifold-dequantization.sif manifold-dequantization.def
 ```
