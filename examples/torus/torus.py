@@ -269,6 +269,7 @@ axes[0].plot(sp[:, 0], sp[:, 1], '.', label='Dequantized Samples', alpha=0.1)
 axes[0].set_xlim((-jnp.pi, jnp.pi))
 axes[0].set_ylim((jnp.pi, -jnp.pi))
 axes[0].grid(linestyle=':')
+axes[0].set_title('Dequantized Samples')
 leg = axes[0].legend()
 for lh in leg.legendHandles:
     lh._legmarker.set_alpha(1)
