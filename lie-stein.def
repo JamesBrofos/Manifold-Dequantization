@@ -2,7 +2,7 @@ Bootstrap: docker
 From: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
 
 %environment
-    export PYTHONPATH=/home/jb3255/project/Lie-Stein:$PYTHONPATH
+    export PYTHONPATH=/path/to/Lie-Stein:$PYTHONPATH
 
 %post
     apt-get update -y && \

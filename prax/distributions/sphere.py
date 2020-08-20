@@ -3,8 +3,19 @@ from typing import Sequence
 import jax.numpy as jnp
 from jax import ops, random
 
-from ..utils import project
 
+def project(x: jnp.ndarray) -> jnp.array:
+    """Project a tensor to the sphere by dividing by the norm along the last
+    dimension.
+
+    Args:
+        x: The tensor to project to the sphere.
+
+    Returns:
+        The projection of `x` to the sphere.
+
+    """
+    return x / jnp.linalg.norm(x, axis=-1)[..., jnp.newaxis]
 
 def haarsph(rng: jnp.ndarray, shape: Sequence[int]) -> jnp.ndarray:
     """Sample from the uniform (Haar) measure on the sphere. This is achieved by
@@ -39,6 +50,7 @@ def powsph(rng: jnp.ndarray, kappa: float, mu: jnp.ndarray, shape:
 
     Returns:
         Samples from the power spherical distribution.
+
     """
     dims = mu.size
     sphere_rng, beta_rng = random.split(rng)
@@ -57,3 +69,39 @@ def powsph(rng: jnp.ndarray, kappa: float, mu: jnp.ndarray, shape:
     H = Id - 2.*jnp.outer(u, u)
     x = jnp.einsum('ij,...j->...i', H, y)
     return x
+
+def expectation_powsph(kappa: float, mu: jnp.ndarray) -> jnp.ndarray:
+    """Compute the expectation of the power spherical distribution.
+
+    Args:
+        kappa: Concentration parameter.
+        mu: Mean direction on the sphere. The dimensionality of the sphere is
+            determined from this paramter.
+
+    Returns:
+        out: The expectation of the power spherical distribution.
+
+    """
+    d = mu.size
+    alpha = (d - 1.) / 2. + kappa
+    beta = (d - 1.) / 2.
+    return mu * (alpha - beta) / (alpha + beta)
+
+def variance_powsph(kappa: float, mu: jnp.ndarray) -> jnp.ndarray:
+    """Compute the variance of the power spherical distribution.
+
+    Args:
+        kappa: Concentration parameter.
+        mu: Mean direction on the sphere. The dimensionality of the sphere is
+            determined from this paramter.
+
+    Returns:
+        out: The variance of the power spherical distribution.
+
+    """
+    d = mu.size
+    alpha = (d - 1.) / 2. + kappa
+    beta = (d - 1.) / 2.
+    return (
+        2*alpha / ((alpha+beta)**2 * (alpha + beta + 1.)) *
+        ((beta - alpha) * jnp.outer(mu, mu) + (alpha + beta) * jnp.eye(d)))

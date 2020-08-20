@@ -1,3 +1,3 @@
-from .linear import LinearDiagonal
-from .permute import Permute
-from .realnvp import RealNVP
+from . import affine
+from . import permute
+from . import realnvp

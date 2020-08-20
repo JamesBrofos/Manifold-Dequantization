@@ -1,37 +1,94 @@
+from typing import Callable, Tuple
+
 import jax.numpy as jnp
-from .bijector import Bijector
-from .linear import LinearDiagonal
+
+from . import affine
 
 
-class RealNVP(Bijector):
-    def __init__(self, num_masked, shift_and_log_scale_fn):
-        self.num_masked = num_masked
+def forward(x: jnp.ndarray, num_masked: int, shift_and_scale_params:
+            Tuple[jnp.ndarray], shift_and_scale_fn: Callable) -> jnp.ndarray:
+    """Forward transformation of the RealNVP bijector. The input is separated into
+    a component that is held constant and a component that is transformed. The
+    input that is constant parameterizes an affine transformation of the
+    transformed component.
 
-        def bijector_fn(paramdict, x0):
-            params = paramdict['params']
-            shift, log_scale = shift_and_log_scale_fn(params, x0)
-            scale = jnp.exp(log_scale)
-            return LinearDiagonal(shift, scale)
-        self.bijector_fn = bijector_fn
+    Args:
+        x: An array to transform according to the RealNVP bijector.
+        num_masked: The elements of the input up to this index are held constant
+            and the remaining elements are transformed; this applies to the last
+            axis of the input.
+        shift_and_scale_params: The parameters of the function that produces the
+            shift and scale of the affine transformation given the constant
+            component of the input.
+        shift_and_scale_fn: Function that computes the shift and scale of the
+            affine transformation given parameters and the constant component of
+            the input.
 
-        super(RealNVP, self).__init__()
+    Returns:
+        y: The first part of the output consists of the constant component of the
+            input. The second part is the affine transformation of the
+            transformed component of the input.
 
-    def forward(self, x, **kwargs):
-        x0, x1 = x[..., :self.num_masked], x[..., self.num_masked:]
-        y1 = self.bijector_fn(kwargs, x0).forward(x1)
-        y = jnp.concatenate([x0, y1], axis=-1)
-        return y
+    """
+    xconst, xtrans = x[..., :num_masked], x[..., num_masked:]
+    shift, scale = shift_and_scale_fn(shift_and_scale_params, xconst)
+    ytrans = affine.forward(xtrans, shift, scale)
+    y = jnp.concatenate([xconst, ytrans], axis=-1)
+    return y
 
-    def inverse(self, y, **kwargs):
-        y0, y1 = y[..., :self.num_masked], y[..., self.num_masked:]
-        x1 = self.bijector_fn(kwargs, y0).inverse(y1)
-        x = jnp.concatenate([y0, x1], axis=-1)
-        return x
+def inverse(y: jnp.ndarray, num_masked: int, shift_and_scale_params:
+            Tuple[jnp.ndarray], shift_and_scale_fn: Callable) -> jnp.ndarray:
+    """Inverse transformation of the RealNVP bijector.
 
-    def forward_log_det_jacobian(self, x, **kwargs):
-        x0, x1 = x[..., :self.num_masked], x[..., self.num_masked:]
-        return self.bijector_fn(kwargs, x0).forward_log_det_jacobian(x1)
+    Args:
+        y: An array on which to apply the inverse transformation of the RealNVP
+            bijector.
+        num_masked: The elements of the input up to this index are held constant
+            and the remaining elements are transformed; this applies to the last
+            axis of the input.
+        shift_and_scale_params: The parameters of the function that produces the
+            shift and scale of the affine transformation given the constant
+            component of the input.
+        shift_and_scale_fn: Function that computes the shift and scale of the
+            affine transformation given parameters and the constant component of
+            the input.
 
-    def inverse_log_det_jacobian(self, y, **kwargs):
-        y0, y1 = y[..., :self.num_masked], y[..., self.num_masked:]
-        return self.bijector_fn(kwargs, y0).inverse_log_det_jacobian(y1)
+    Returns:
+        x: The inverse transformation of the RealNVP bijector applied to the
+            input.
+
+    """
+    yconst, ytrans = y[..., :num_masked], y[..., num_masked:]
+    shift, scale = shift_and_scale_fn(shift_and_scale_params, yconst)
+    xtrans = affine.inverse(ytrans, shift, scale)
+    x = jnp.concatenate([yconst, xtrans], axis=-1)
+    return x
+
+def forward_log_det_jacobian(x: jnp.ndarray, num_masked: int,
+                             shift_and_scale_params: Tuple[jnp.ndarray],
+                             shift_and_scale_fn: Callable) -> jnp.ndarray:
+    """Computes the Jacobian correction for a random variable that is transformed
+    in the forward direction by the RealNVP bijector. This is just the forward
+    log-determinant of the Jacobian of an affine transformation parameterized
+    by the shift and scale function.
+
+    Args:
+        x: An array to transform according to the RealNVP bijector.
+        num_masked: The elements of the input up to this index are held constant
+            and the remaining elements are transformed; this applies to the last
+            axis of the input.
+        shift_and_scale_params: The parameters of the function that produces the
+            shift and scale of the affine transformation given the constant
+            component of the input.
+        shift_and_scale_fn: Function that computes the shift and scale of the
+            affine transformation given parameters and the constant component of
+            the input.
+
+    Returns:
+        out: The log-determinant of the Jacobian of the RealNVP bijector in the
+            forward direction.
+
+    """
+    xconst, xtrans = x[..., :num_masked], x[..., num_masked:]
+    shift, scale = shift_and_scale_fn(shift_and_scale_params, xconst)
+    return affine.forward_log_det_jacobian(scale)
