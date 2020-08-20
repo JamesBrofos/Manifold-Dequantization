@@ -35,7 +35,7 @@ def inverse(y: jnp.ndarray, perm: jnp.ndarray) -> jnp.ndarray:
 
 def forward_log_det_jacobian() -> float:
     """The permutation operation is volume preserving and hence the determinant of
-    its Jacobian is one; the log determinant is zero.
+    its Jacobian is one; the log-determinant is zero.
 
     Returns:
         out: The log-determinant of the Jacobian is zero; returns zero.
