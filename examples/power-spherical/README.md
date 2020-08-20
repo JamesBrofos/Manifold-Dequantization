@@ -31,7 +31,6 @@ Instead of visually comparing samples, we can instead look at how well the proje
 ```
 difference between means:       0.01947 - relative error: 0.02025
 difference between covariances: 0.01511 - relative error: 0.28851
-
 ```
 On the other hand when we maximize the ELBO of the dequantizing distribution.
 ```
