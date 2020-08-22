@@ -1,8 +1,8 @@
 # Repo ignores
-*.mp4
 *.txt
 *.csv
 core.*
+video-frames/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
