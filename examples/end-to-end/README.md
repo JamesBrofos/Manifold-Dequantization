@@ -8,7 +8,9 @@ Here are training curves and a visualization of the dequantization from two angl
 
 ![Power Spherical Mixture Dequantization](images/training-objectives-sphere.png)
 
-I have also made a video to compare actual samples from the mixture of power spherical distributions and the samples obtained by dequantization.
+## Video of Samples
+
+I have also made a video to compare actual samples from the mixture of power spherical distributions and the samples obtained by dequantization. There appears to be an anomaly at the border of the two mixture components wherein a cluster of spurious projections can be found.
 
 ![Dequantization Samples](images/dequantization.mp4)
 
