@@ -31,7 +31,7 @@ assert jnp.allclose(circle2angle(angle2circle(s[:, 0])), s[:, 0])
 
 
 def shift_and_scale_fn_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
-    """Factory for producing shift and scale networks and their parameterizations.
+    """Factory for producing neural networks and their parameterizations.
 
     Args:
         rng: Pseudo-random number generator seed.
@@ -41,7 +41,7 @@ def shift_and_scale_fn_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> T
 
     Returns:
         out: A tuple containing the network parameters and a callable function
-            that returns the shift and scale for given inputs.
+            that returns the neural network output for the given input.
 
     """
     params_init, fn = stax.serial(
@@ -143,7 +143,7 @@ if args.num_dequantization_steps > 0:
 # Delete irrelevant variables to avoid poluting the namespace.
 del (opt_init, opt_update, get_params, train)
 
-# Generate the parameters of two RealNVP bijectors.
+# Generate the parameters of three RealNVP bijectors.
 params, fns = [], []
 for i in range(3):
     p, f = shift_and_scale_fn_factory(random.fold_in(rng, i), 2, 2)
@@ -152,14 +152,14 @@ for i in range(3):
 
 def forward(params: Sequence[jnp.ndarray], fns: Sequence[Callable], x:
             jnp.ndarray) -> jnp.ndarray:
-    """Forward transformation of two RealNVP bijectors and a permutation bijector
+    """Forward transformation of three RealNVP bijectors and a permutation bijector
     between them.
 
     Args:
         params: List of arrays parameterizing the RealNVP bijectors.
         fns: List of functions that compute the shift and scale of the RealNVP
             affine transformation.
-        x: Input to transform according to the composition of two RealNVP
+        x: Input to transform according to the composition of three RealNVP
             transformations and a permutation.
 
     Returns:
@@ -176,7 +176,7 @@ def forward(params: Sequence[jnp.ndarray], fns: Sequence[Callable], x:
 def negative_log_likelihood(params: Sequence[jnp.ndarray], fns:
                             Sequence[Callable], y: jnp.ndarray) -> float:
     """Compute the negative log-likelihood of observations under the transformation
-    given by two RealNVP bijectors and a permutation bijector between them.
+    given by three RealNVP bijectors and a permutation bijector between them.
     Assumes that the base distribution is a standard multivariate normal.
 
     Args:

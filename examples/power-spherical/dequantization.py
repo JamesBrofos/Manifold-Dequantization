@@ -20,8 +20,8 @@ parser = argparse.ArgumentParser(description='Power Spherical Sampling via Dequa
 parser.add_argument('--num-dequantization-steps', type=int, default=1000, help='Number of training steps for estimating dequantization parameters')
 args = parser.parse_args()
 
-def shift_and_scale_fn_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
-    """Factory for producing shift and scale networks and their parameterizations.
+def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
+    """Factory for producing neural networks and their parameterizations.
 
     Args:
         rng: Pseudo-random number generator seed.
@@ -31,7 +31,7 @@ def shift_and_scale_fn_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> T
 
     Returns:
         out: A tuple containing the network parameters and a callable function
-            that returns the shift and scale for given inputs.
+            that returns the neural network output for the given input.
 
     """
     params_init, fn = stax.serial(
@@ -48,8 +48,8 @@ def ambient_log_prior(x: jnp.ndarray) -> jnp.ndarray:
     r = jnp.linalg.norm(x, axis=-1)
     return jspst.norm.logpdf(r, 5.0, 1.0)
 
-def negative_elbo(mu_and_sigma_params: Sequence, mu_and_sigma_fn: Callable,
-                  rng: jnp.ndarray, y: jnp.ndarray) -> float:
+def negative_elbo(mu_and_sigma_params: Sequence[jnp.ndarray], mu_and_sigma_fn:
+                  Callable, rng: jnp.ndarray, y: jnp.ndarray) -> float:
     """Compute the negative evidence lower bound of the dequantizing distribution.
     This is the loss function for learning parameters of the dequantizing
     distribution.
@@ -74,12 +74,13 @@ y = sphere.powsph(rng, kappa, musph, [10000])
 
 # Parameterize the mean and scale of a log-normal multiplicative dequantizer.
 rng, deq_rng = random.split(rng, 2)
-mu_and_sigma_params, mu_and_sigma_fn = shift_and_scale_fn_factory(deq_rng, 3, 1)
+mu_and_sigma_params, mu_and_sigma_fn = network_factory(deq_rng, 3, 1)
 
 # Train the variational dequantization distribution.
 opt_init, opt_update, get_params = optimizers.adam(1e-3)
 
-def update(it: int, rng: jnp.ndarray, opt_state: optimizers.OptimizerState, y: jnp.ndarray) -> Tuple:
+def update(it: int, rng: jnp.ndarray, opt_state: optimizers.OptimizerState, y:
+           jnp.ndarray) -> Tuple:
     """Update the parameters of the dequantizing distribution by minimizing the
     negative evidence lower bound.
 
@@ -135,7 +136,7 @@ del (opt_init, opt_update, get_params, train)
 # Generate the parameters of two RealNVP bijectors.
 params, fns = [], []
 for i in range(2):
-    p, f = shift_and_scale_fn_factory(random.fold_in(rng, i), 1, 2)
+    p, f = network_factory(random.fold_in(rng, i), 1, 2)
     params.append(p)
     fns.append(f)
 
