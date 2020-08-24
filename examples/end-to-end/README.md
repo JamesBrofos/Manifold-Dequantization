@@ -10,12 +10,12 @@ Here are training curves and a visualization of the dequantization from two angl
 
 ## Next Steps
 
-Try to eliminate the need to bias the dequantization distribution. To accomplish this, consider training the ambient density first toward a fixed dequantization distribution that avoids the singularity. Then train both the dequantization and ambient density jointly.
+Try to eliminate the need to bias the dequantization distribution. To accomplish this, consider training the ambient density first toward a fixed dequantization distribution that avoids the singularity. Then train both the dequantization and ambient density jointly. We have the density of the power spherical distribution explicitly so we can exactly compare the quality of the evidence lower bound. Look at score-matching for learning densities that are unnormalized on manifolds; see this paper [Learning Discrete Distributions by Dequantization](https://arxiv.org/abs/2001.11235).
 
 ## Video of Samples
 
 I have also made a video to compare actual samples from the mixture of power spherical distributions and the samples obtained by dequantization. There appears to be an anomaly at the border of the two mixture components wherein a cluster of spurious projections can be found.
-
+ 
 ![Dequantization Samples](images/dequantization.mp4)
 
 ## Video Generation
