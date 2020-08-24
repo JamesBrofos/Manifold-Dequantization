@@ -199,7 +199,7 @@ def train(num_steps: int, lr: float, rng: jnp.ndarray, params: Tuple[jnp.ndarray
     return params, elbo
 
 params = (mu_and_sigma_params, bij_params)
-(mu_and_sigma_params, bij_params), elbo = train(1000, 1e-3, rng_train, params)
+(mu_and_sigma_params, bij_params), elbo = train(10000, 1e-3, rng_train, params)
 
 x, _ = dequantize(rng, mu_and_sigma_params, mu_and_sigma_fn, obs)
 xs = random.normal(rng, [10000, 3])
