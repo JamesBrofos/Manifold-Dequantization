@@ -8,9 +8,13 @@ Here are training curves and a visualization of the dequantization from two angl
 
 ![Power Spherical Mixture Dequantization](images/training-objectives-sphere.png)
 
-## Next Steps
+## Update August 29th, 2020
 
-Try to eliminate the need to bias the dequantization distribution. To accomplish this, consider training the ambient density first toward a fixed dequantization distribution that avoids the singularity. Then train both the dequantization and ambient density jointly. We have the density of the power spherical distribution explicitly so we can exactly compare the quality of the evidence lower bound. Look at score-matching for learning densities that are unnormalized on manifolds; see this paper [Learning Discrete Distributions by Dequantization](https://arxiv.org/abs/2001.11235).
+I have eliminated the need to bias the dequantization distribution (which was to force it to dequantize to points with norm greater than one). This was accomplished by simply reparameterizing the dequantization distribution. Rather than having a neural network model the mean of the log-normal dequantizer, I instead have it produce the log-mean, which is then exponentiated. This was enough to give stable ELBO estimates and a convincing dequantization, while still preserving the ability to dequantize anywhere in the ambient space with some probability. See the above figure for an example.
+
+The second direction was to investigate importance sampling as a means of computing the estimated density on the manifold. I have implemented this and below one may compare the analytic density of the power spherical mixture and the importance sample approximation. The estimated KL-divergence between the approximation and the target distribution is 0.03401; as a point of comparison, the KL-divergence between the Haar distribution on the sphere and the target distribution is 20.28852. There is a clear improvement in this respect. Here is a visual comparison of the densities with the same color scale applied to either subplot.
+
+![Power Spherical Density Estimate](images/power-spherical-mixture-density.png)
 
 ## Video of Samples
 

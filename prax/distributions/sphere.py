@@ -1,6 +1,7 @@
 from typing import Sequence
 
 import jax.numpy as jnp
+import jax.scipy.special as spsp
 from jax import ops, random
 
 
@@ -34,6 +35,25 @@ def haarsph(rng: jnp.ndarray, shape: Sequence[int]) -> jnp.ndarray:
     """
     x = random.normal(rng, shape)
     return project(x)
+
+def haarsphlogdensity(x: jnp.ndarray) -> jnp.ndarray:
+    """Log-density of the uniform distribution on the sphere. Since the Haar
+    distribution is uniform, the density is just the inverse of the surface
+    area of the sphere. Therefore, the log-density is the negative logarithm of
+    the surface area.
+
+    Args:
+        x: The locations on the sphere at which to compute the log-density of
+            the Haar distribution on the sphere.
+
+    Returns:
+        out: The log-density of the Haar distribution of the sphere.
+
+    """
+    n = x.shape[-1]
+    halfn = 0.5*n
+    logsa = jnp.log(2.) + halfn*jnp.log(jnp.pi) + spsp.gammaln(halfn)
+    return -logsa*jnp.ones(x.shape[:-1])
 
 def powsph(rng: jnp.ndarray, kappa: float, mu: jnp.ndarray, shape:
            Sequence[int]) -> jnp.ndarray:
@@ -69,6 +89,29 @@ def powsph(rng: jnp.ndarray, kappa: float, mu: jnp.ndarray, shape:
     H = Id - 2.*jnp.outer(u, u)
     x = jnp.einsum('ij,...j->...i', H, y)
     return x
+
+def powsphlogdensity(x: jnp.ndarray, kappa: float, mu: jnp.ndarray) -> jnp.ndarray:
+    """Log-density function of the power spherical distribution.
+
+    Args:
+        x: The set of points at which to evaluate the power spherical density.
+        kappa: Concentration parameter.
+        mu: Mean direction on the sphere. The dimensionality of the sphere is
+            determined from this paramter.
+
+    Returns:
+        out: The log-density of the power spherical distribution with the
+            specified concentration and mean parameter at the desired points.
+
+    """
+    d = mu.size
+    alpha = (d - 1.) / 2. + kappa
+    beta = (d - 1.) / 2.
+    lognormalizer = (
+        (alpha + beta) * jnp.log(2.) + beta * jnp.log(jnp.pi) +
+        spsp.gammaln(alpha) - spsp.gammaln(alpha + beta))
+    unlogprob = kappa * jnp.log(1. + x.dot(mu))
+    return unlogprob - lognormalizer
 
 def expectation_powsph(kappa: float, mu: jnp.ndarray) -> jnp.ndarray:
     """Compute the expectation of the power spherical distribution.
