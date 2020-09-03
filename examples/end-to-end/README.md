@@ -25,7 +25,7 @@ Here is the learning curve and tangent space density of the good base. The two m
 
 ![Good Base](images/exponential-coordinates-good.png)
 
-Here is the same figure but for coordinates whose base is the bad antipodal point. This performance looks much worse with some large gaps appearing in the surrounding circle (points here correspond to observations around the antipodal mode). The KL divergence is 0.33989.
+Here is the same figure but for coordinates whose base is the bad antipodal point. This performance looks much worse with some large gaps appearing in the surrounding circle (points here correspond to observations around the antipodal mode). The KL divergence is 0.33989. There are some spurious samples where the flow has placed some density but wherein no nearby observations may be found.
 
 ![Bad Base](images/exponential-coordinates-bad.png)
 
