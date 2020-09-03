@@ -35,9 +35,9 @@ Videos of the learned densities for either the good or bad tangent space densiti
 
 I have also made a video to compare actual samples from the mixture of power spherical distributions and the samples obtained by dequantization. There appears to be an anomaly at the border of the two mixture components wherein a cluster of spurious projections can be found.
  
-![Dequantization Samples](images/dequantization.mp4)
-![Good Tangent Space](images/exponential-good.mp4)
-![Bad Tangent Space](images/exponential-bad.mp4)
+* ![Dequantization Samples](images/dequantization.mp4)
+* ![Good Tangent Space](images/exponential-good.mp4)
+* ![Bad Tangent Space](images/exponential-bad.mp4)
 
 ## Video Generation
 
