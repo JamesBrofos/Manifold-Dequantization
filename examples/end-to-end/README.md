@@ -16,15 +16,34 @@ The second direction was to investigate importance sampling as a means of comput
 
 ![Power Spherical Density Estimate](images/power-spherical-mixture-density.png)
 
+
+## Update September 2nd, 2020
+
+The objective was to compare the ambient dequantization and modeling the density via a normalizing flow in the tangent space, which is then mapped to the manifold via the exponential map. I consider two points on the manifold as the "base" of the tangent space: (1) the midpoint (on the sphere) of the two modes and (2) the antipodal point of one of the modes. These are referred to as "good" and "bad" respectively. To obtain points in the tangent space, I apply the logarithmic map to observations on the manifold.
+
+Here is the learning curve and tangent space density of the good base. The two modes of the distribution look reasonably well approximated. When I compute the KL divergence of this distribution and the true density on the manifold, it is 0.02392; dequantization achieved 0.03401. 
+
+![Good Base](images/exponential-coordinates-good.png)
+
+Here is the same figure but for coordinates whose base is the bad antipodal point. This performance looks much worse with some large gaps appearing in the surrounding circle (points here correspond to observations around the antipodal mode). The KL divergence is 0.33989.
+
+![Bad Base](images/exponential-coordinates-bad.png)
+
+Videos of the learned densities for either the good or bad tangent space densities are available in the videos section.
+
 ## Video of Samples
 
 I have also made a video to compare actual samples from the mixture of power spherical distributions and the samples obtained by dequantization. There appears to be an anomaly at the border of the two mixture components wherein a cluster of spurious projections can be found.
  
 ![Dequantization Samples](images/dequantization.mp4)
+![Good Tangent Space](images/exponential-good.mp4)
+![Bad Tangent Space](images/exponential-bad.mp4)
 
 ## Video Generation
 
 To make the video you must have `ffmpeg` available. Run the following commands.
 ```
 singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif ffmpeg -y -r 60 -f image2 -s 1920x1080 -i video-frames/spherical-samples-%05d.png -vcodec libx264 -crf 25  -pix_fmt yuv420p images/dequantization.mp4
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif ffmpeg -y -r 60 -f image2 -s 1920x1080 -i video-frames/exponential-density-bad-%05d.png -vcodec libx264 -crf 25  -pix_fmt yuv420p images/exponential-bad.mp4
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif ffmpeg -y -r 60 -f image2 -s 1920x1080 -i video-frames/exponential-density-good-%05d.png -vcodec libx264 -crf 25  -pix_fmt yuv420p images/exponential-good.mp4
 ```

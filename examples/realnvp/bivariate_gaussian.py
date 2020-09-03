@@ -64,8 +64,8 @@ def forward(params: Sequence[jnp.ndarray], fns: Sequence[Callable], x:
     y = realnvp.forward(y, 1, params[1], fns[1])
     return y
 
-def negative_log_likelihood(params: Sequence[jnp.ndarray], fns:
-                            Sequence[Callable], y: jnp.ndarray) -> float:
+def ambient_log_prob(params: Sequence[jnp.ndarray], fns:
+                     Sequence[Callable], y: jnp.ndarray) -> float:
     """Compute the negative log-likelihood of observations under the transformation
     given by two RealNVP bijectors and a permutation bijector between them.
     Assumes that the base distribution is a standard multivariate normal.
@@ -88,8 +88,12 @@ def negative_log_likelihood(params: Sequence[jnp.ndarray], fns:
     fldj += permute.forward_log_det_jacobian()
     y = realnvp.inverse(y, 1, params[0], fns[0])
     fldj += realnvp.forward_log_det_jacobian(y, 1, params[0], fns[0])
-    return -jnp.mean(jspst.multivariate_normal.logpdf(y, jnp.zeros((2, )), 1.) - fldj)
+    return jspst.multivariate_normal.logpdf(y, jnp.zeros((2, )), 1.) - fldj
 
+
+def negative_log_likelihood(params: Sequence[jnp.ndarray], fns:
+                            Sequence[Callable], y: jnp.ndarray) -> float:
+    return -jnp.mean(ambient_log_prob(params, fns, y))
 
 # Generate observations from a multivariate normal with a given mean and
 # covariance structure.
@@ -172,3 +176,10 @@ axes[1].legend()
 axes[1].set_title('RealNVP Samples')
 axes[1].grid(linestyle=':')
 plt.savefig(os.path.join('images', 'bivariate-gaussian-realnvp.png'))
+
+# Compute an approximation of the KL divergence. Should be small since RealNVP
+# can approximate the target multivariate normal distribution.
+lpamb = ambient_log_prob(params, fns, yp)
+ltarg = jspst.multivariate_normal.logpdf(yp, mu, Cov)
+kl = jnp.mean(lpamb - ltarg)
+print('kl-divergence: {:.5f}'.format(kl))
