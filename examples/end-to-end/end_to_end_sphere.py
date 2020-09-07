@@ -214,7 +214,7 @@ def train(num_steps: int, lr: float, rng: jnp.ndarray, params: Tuple[jnp.ndarray
     params = get_params(opt_state)
     return params, elbo
 
-(mu_and_sigma_params, bij_params), elbo = train(1000, 1e-3, rng_train, (mu_and_sigma_params, bij_params))
+(mu_and_sigma_params, bij_params), elbo = train(10000, 1e-3, rng_train, (mu_and_sigma_params, bij_params))
 
 x, _ = dequantize(rng, mu_and_sigma_params, mu_and_sigma_fn, obs, 1)
 x = x[0]
@@ -292,7 +292,7 @@ print(jnp.log(jnp.mean(jnp.exp(pamb) / jnp.exp(qcond), 0)))
 xs = random.normal(rng, [20000, 3])
 xs = forward(bij_params, bij_fns, xs)
 pobs = xs / jnp.linalg.norm(xs, axis=-1)[..., jnp.newaxis]
-x, qcond = dequantize(rng, mu_and_sigma_params, mu_and_sigma_fn, pobs, 30)
+x, qcond = dequantize(rng, mu_and_sigma_params, mu_and_sigma_fn, pobs, 50)
 pamb = ambient_flow_log_prob(bij_params, bij_fns, x)
 p_est = jnp.mean(jnp.exp(pamb) / jnp.exp(qcond), 0)
 p_target = mixture_density(pobs, kappa, muspha, musphb)

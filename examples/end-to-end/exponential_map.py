@@ -199,7 +199,7 @@ def train(num_steps, lr, rng, bij_params, bij_fns, obs):
     bij_params = get_params(opt_state)
     return bij_params, nll
 
-bij_params, nll = train(1000, 1e-3, rng, bij_params, bij_fns, obs)
+bij_params, nll = train(10000, 1e-3, rng, bij_params, bij_fns, obs)
 xs = random.normal(rng, obs.shape)
 xs = forward(bij_params, bij_fns, xs)
 inj = jnp.linalg.norm(xs, axis=-1) < jnp.pi
@@ -236,9 +236,9 @@ plt.savefig(os.path.join('images', 'exponential-coordinates-{}.png'.format('good
 expm = vmap(expmap, in_axes=(None, 0))(base, m)
 sph_p_est = p_est / jnp.sqrt(det)
 
-notnan = ~jnp.isnan(log_p_est)
 log_p_target = jnp.log(mixture_density(expm, kappa, muspha, musphb))
 log_sph_p_est = jnp.log(sph_p_est)
+notnan = ~jnp.isnan(log_sph_p_est)
 kl = jnp.mean(log_sph_p_est[notnan] - log_p_target[notnan])
 print('exponential map kl-divergence: {:.5f}'.format(kl))
 
