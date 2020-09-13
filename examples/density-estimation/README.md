@@ -8,3 +8,7 @@ In this example we will seek to minimize the score matching loss for a power sph
 
 ![Power Spherical Density Estimate](images/power-spherical-mixture-score-matching-elbo-weight-1.0.png)
 
+There are 10,000 training steps, 75 importance samples, and a learning rate of 0.001. Here is the invocation to reproduce:
+```
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python score_matching.py --num-steps 10000 --lr 1e-3 --num-importance 75 --seed 0
+```
