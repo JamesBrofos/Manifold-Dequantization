@@ -1,7 +1,7 @@
 from typing import Sequence
 
 import jax.numpy as jnp
-import jax.scipy.special as spsp
+import jax.scipy.special as jspsp
 from jax import ops, random
 
 
@@ -52,7 +52,7 @@ def haarsphlogdensity(x: jnp.ndarray) -> jnp.ndarray:
     """
     n = x.shape[-1]
     halfn = 0.5*n
-    logsa = jnp.log(2.) + halfn*jnp.log(jnp.pi) + spsp.gammaln(halfn)
+    logsa = jnp.log(2.) + halfn*jnp.log(jnp.pi) + jspsp.gammaln(halfn)
     return -logsa*jnp.ones(x.shape[:-1])
 
 def powsph(rng: jnp.ndarray, kappa: float, mu: jnp.ndarray, shape:
@@ -109,7 +109,7 @@ def powsphlogdensity(x: jnp.ndarray, kappa: float, mu: jnp.ndarray) -> jnp.ndarr
     beta = (d - 1.) / 2.
     lognormalizer = (
         (alpha + beta) * jnp.log(2.) + beta * jnp.log(jnp.pi) +
-        spsp.gammaln(alpha) - spsp.gammaln(alpha + beta))
+        jspsp.gammaln(alpha) - jspsp.gammaln(alpha + beta))
     unlogprob = kappa * jnp.log(1. + x.dot(mu))
     return unlogprob - lognormalizer
 

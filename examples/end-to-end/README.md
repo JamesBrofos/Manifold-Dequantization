@@ -12,7 +12,7 @@ Here are training curves and a visualization of the dequantization from two angl
 
 I have eliminated the need to bias the dequantization distribution (which was to force it to dequantize to points with norm greater than one). This was accomplished by simply reparameterizing the dequantization distribution. Rather than having a neural network model the mean of the log-normal dequantizer, I instead have it produce the log-mean, which is then exponentiated. This was enough to give stable ELBO estimates and a convincing dequantization, while still preserving the ability to dequantize anywhere in the ambient space with some probability. See the above figure for an example.
 
-The second direction was to investigate importance sampling as a means of computing the estimated density on the manifold. I have implemented this and below one may compare the analytic density of the power spherical mixture and the importance sample approximation. The estimated KL-divergence between the approximation and the target distribution is 0.03401; as a point of comparison, the KL-divergence between the Haar distribution on the sphere and the target distribution is 20.28852. There is a clear improvement in this respect. Here is a visual comparison of the densities with the same color scale applied to either subplot.
+The second direction was to investigate importance sampling as a means of computing the estimated density on the manifold. I have implemented this and below one may compare the analytic density of the power spherical mixture and the importance sample approximation. The estimated KL-divergence between the approximation and the target distribution is 0.00395; as a point of comparison, the KL-divergence between the Haar distribution on the sphere and the target distribution is 20.28852. There is a clear improvement in this respect. Here is a visual comparison of the densities with the same color scale applied to either subplot.
 
 ![Power Spherical Density Estimate](images/power-spherical-mixture-density.png)
 
@@ -21,7 +21,7 @@ The second direction was to investigate importance sampling as a means of comput
 
 The objective was to compare the ambient dequantization and modeling the density via a normalizing flow in the tangent space, which is then mapped to the manifold via the exponential map. I consider two points on the manifold as the "base" of the tangent space: (1) the midpoint (on the sphere) of the two modes and (2) the antipodal point of one of the modes. These are referred to as "good" and "bad" respectively. To obtain points in the tangent space, I apply the logarithmic map to observations on the manifold.
 
-Here is the learning curve and tangent space density of the good base. The two modes of the distribution look reasonably well approximated. When I compute the KL divergence of this distribution and the true density on the manifold, it is 0.02392; dequantization achieved 0.03401. 
+Here is the learning curve and tangent space density of the good base. The two modes of the distribution look reasonably well approximated. When I compute the KL divergence of this distribution and the true density on the manifold, it is 0.02392; dequantization achieved 0.00395. 
 
 ![Good Base](images/exponential-coordinates-good.png)
 
