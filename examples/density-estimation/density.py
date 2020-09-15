@@ -1,4 +1,4 @@
-from typing import Callable, Sequence, Tuple
+from typing import Callable, Sequence
 
 import jax.numpy as jnp
 import jax.scipy.special as jspsp

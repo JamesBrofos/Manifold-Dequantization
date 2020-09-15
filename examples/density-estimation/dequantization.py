@@ -20,6 +20,7 @@ def dequantize(rng: jnp.ndarray, deq_params: Sequence[jnp.ndarray],
         deq_fn: Function that computes the mean and scale given its
             parameterization and input.
         y: Observations on the sphere to dequantize.
+        num_samples: Number of dequantization samples to compute.
 
     Returns:
         x, qcond: A tuple containing observations that are dequantized according

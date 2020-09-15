@@ -7,11 +7,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 import jax.numpy as jnp
-import jax.scipy.stats as jspst
-import jax.scipy.special as jspsp
-from jax import lax, nn, ops, random, tree_util
-from jax import grad, jacobian, jit, value_and_grad, vmap
-from jax.experimental import optimizers, stax
+from jax import lax, random
+from jax import jit, value_and_grad
+from jax.experimental import optimizers
 
 import prax.distributions as pd
 import prax.manifolds as pm
@@ -21,8 +19,8 @@ from density import log_importance_sample_density, sphere_density, log_sphere_de
 from dequantization import negative_elbo
 from network import network_factory
 
-parser = argparse.ArgumentParser(description='Dequantizing power spherical mixture distribution')
-parser.add_argument('--num-steps', type=int, default=1000, help='Number of gradient descent iterations for end-to-end training')
+parser = argparse.ArgumentParser(description='Density estimation for power spherical mixture distribution')
+parser.add_argument('--num-steps', type=int, default=1000, help='Number of gradient descent iterations for score matching training')
 parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent learning rate')
 parser.add_argument('--num-batch', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--num-importance', type=int, default=50, help='Number of importance samples')
