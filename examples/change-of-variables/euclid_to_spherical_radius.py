@@ -9,10 +9,11 @@ def euclid2sphericalrad(x):
     return jnp.hstack((r, s))
 
 rng = random.PRNGKey(0)
-for ndim in range(1, 10):
+for ndim in range(1, 5):
     x = random.normal(rng, [ndim])
     xs = x / jnp.linalg.norm(x)
-    scale = 5.
-    J = jacobian(euclid2sphericalrad)(scale * xs)
+    r = 5.
+    xp = r * xs
+    J = jacobian(euclid2sphericalrad)(xp)
     det = jnp.sqrt(jnp.linalg.det(J.T@J))
-    print('dim.: {} - determinant: {:.10f} - pred.: {:.10f}'.format(ndim, det, 1 / scale**(ndim-1)))
+    print('dim.: {} - determinant: {:.10f} - pred.: {:.10f}'.format(ndim, det, 1 / r**(ndim-1)))

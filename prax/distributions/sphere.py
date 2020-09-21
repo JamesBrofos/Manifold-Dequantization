@@ -52,7 +52,7 @@ def haarsphlogdensity(x: jnp.ndarray) -> jnp.ndarray:
     """
     n = x.shape[-1]
     halfn = 0.5*n
-    logsa = jnp.log(2.) + halfn*jnp.log(jnp.pi) + jspsp.gammaln(halfn)
+    logsa = jnp.log(2.) + halfn*jnp.log(jnp.pi) - jspsp.gammaln(halfn)
     return -logsa*jnp.ones(x.shape[:-1])
 
 def powsph(rng: jnp.ndarray, kappa: float, mu: jnp.ndarray, shape:

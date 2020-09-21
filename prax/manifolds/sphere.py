@@ -46,6 +46,24 @@ def logmap(x: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
     di = sphdist(x, y)
     return lax.cond(di > 1e-6, lambda _: v * (di / nv), lambda _: v, None)
 
+def expmap(x: jnp.ndarray, v: jnp.ndarray) -> jnp.ndarray:
+    """Exponential map to proceed from `x` with velocity `v` along the geodesic.
+    Implementation derived from [1].
+
+    [1] https://www.manopt.org/
+
+    Args:
+        x: A point on the sphere.
+        v: A point in the tangent space of `x`.
+
+    Returns:
+        out: The exponential map which is the unit time geodesic from initial
+            position `x` and velocity `v`.
+
+    """
+    nv = jnp.linalg.norm(v)
+    return lax.cond(nv > 0., lambda _: x * jnp.cos(nv) + v * (jnp.sin(nv)/ nv), lambda _: x, None)
+
 def sphgrad(fn: Callable, obs: jnp.ndarray, *args: Sequence) -> jnp.ndarray:
     """Compute the gradient of a function constrained to the sphere. This is the
     orthogonal projection of the ambient Euclidean gradient to the tangent
