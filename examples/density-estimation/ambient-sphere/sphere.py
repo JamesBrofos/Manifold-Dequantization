@@ -17,7 +17,7 @@ import prax.distributions as pd
 import prax.manifolds as pm
 from prax.bijectors import realnvp, permute
 
-from coordinates import sph2euclid, hsph2euclid
+from coordinates import sph2euclid, sph2latlon, hsph2euclid
 from rejection_sampling import embedded_earth_density, embedded_sphere_density, embedded_hypersphere_density, rejection_sampling
 
 
@@ -26,6 +26,8 @@ parser.add_argument('--num-steps', type=int, default=1000, help='Number of gradi
 parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent learning rate')
 parser.add_argument('--num-batch', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--density', type=str, default='sphere', help='Indicator of which density function on the sphere to use')
+parser.add_argument('--elbo-loss', type=int, default=1, help='Flag to indicate using the ELBO loss')
+parser.add_argument('--num-importance', type=int, default=20, help='Number of importance samples to draw during training; if the ELBO loss is used, this argument is ignored')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
@@ -259,6 +261,7 @@ def dequantize(rng: jnp.ndarray, deq_params: Sequence[jnp.ndarray], deq_fn: Call
     mu = nn.softplus(mu)
     # Random samples for dequantization.
     rng, rng_rad = random.split(rng, 2)
+    mu, sigma = mu[..., 0], sigma[..., 0]
     rad = pd.lognormal.sample(rng_rad, mu, sigma, [num_samples] + list(xsph.shape[:-1]))
     xdeq = rad[..., jnp.newaxis] * xsph
     # Dequantization density calculation.
@@ -309,10 +312,17 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
         nelbo: The negative evidence lower bound.
 
     """
-    rng, rng_rej, rng_elbo, rng_deq = random.split(rng, 4)
-    xsph = rejection_sampling(rng_rej, num_samples, num_dims, sphere_density)
-    nelbo = negative_elbo(rng_elbo, bij_params, bij_fns, deq_params, deq_fn, xsph).mean()
-    return nelbo
+    if args.elbo_loss:
+        rng, rng_rej, rng_elbo, rng_deq = random.split(rng, 4)
+        xsph = rejection_sampling(rng_rej, num_samples, num_dims, sphere_density)
+        nelbo = negative_elbo(rng_elbo, bij_params, bij_fns, deq_params, deq_fn, xsph).mean()
+        return nelbo
+    else:
+        rng, rng_rej, rng_is = random.split(rng, 3)
+        xsph = rejection_sampling(rng_rej, num_samples, num_dims, sphere_density)
+        log_is = importance_log_density(rng_is, bij_params, bij_fns, deq_params, deq_fn, args.num_importance, xsph)
+        log_target = jnp.log(sphere_density(xsph))
+        return jnp.mean(log_target - log_is)
 
 def zero_nans(g):
     """Remove the NaNs in a matrix by replaceing them with zeros.
@@ -389,17 +399,21 @@ xobs = rejection_sampling(rng_xobs, len(xsph), num_dims, sphere_density)
 # Compute comparison statistics.
 mean_mse = jnp.square(jnp.linalg.norm(xsph.mean(0) - xobs.mean(0)))
 cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xsph.T) - jnp.cov(xobs.T)))
-approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 100, xsph[:2000])
-target = sphere_density(xsph[:2000])
-Z = jnp.mean(target / approx)
+approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 100, xsph)
+target = sphere_density(xsph)
+w = target / approx
+Z = jnp.mean(w)
 log_approx = jnp.log(approx)
 log_target = jnp.log(target)
 kl = jnp.mean(log_approx - log_target) + jnp.log(Z)
-print('estimate KL(q||p): {:.5f}'.format(kl))
+ess = jnp.square(jnp.sum(w)) / jnp.sum(jnp.square(w))
+ress = 100 * ess / len(w)
+print('estimate KL(q||p): {:.5f} - relative effective sample size: {:.2f}%'.format(kl, ress))
 
 
 # Visualize learned distribution.
 if num_dims == 3:
+    lat, lon = sph2latlon(xsph)
     theta = jnp.linspace(-jnp.pi, jnp.pi)[1:-1]
     phi = jnp.linspace(-jnp.pi / 2, jnp.pi / 2)[1:-1]
     xx, yy = jnp.meshgrid(theta, phi)
@@ -421,16 +435,17 @@ if num_dims == 3:
     for lh in leg.legendHandles:
         lh._legmarker.set_alpha(1)
     ax = fig.add_subplot(143, projection='mollweide')
-    ax.contourf(xx, yy, dens.reshape(xx.shape))
+    ax.scatter(lon, lat, c=approx, vmin=0., vmax=jnp.quantile(approx, 0.97))
     ax.set_axis_off()
     ax.set_title('Approximate Density')
     ax = fig.add_subplot(144, projection='mollweide')
-    ax.contourf(xx, yy, sphere_density(psph).reshape(xx.shape))
+    ax.scatter(lon, lat, c=target)
     ax.set_axis_off()
     ax.set_title('Target Density')
-    plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f}'.format(mean_mse, cov_mse, kl))
+    plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
     plt.tight_layout()
-    plt.savefig(os.path.join('images', '{}-density.png'.format(args.density)))
+    ln = 'elbo' if args.elbo_loss else 'kl'
+    plt.savefig(os.path.join('images', '{}-density-{}-num-importance-{}.png'.format(args.density, ln, args.num_importance)))
 elif num_dims == 4:
     num_slices = 8
     fig = plt.figure(figsize=(10, 3))
@@ -450,6 +465,8 @@ elif num_dims == 4:
         ax.contourf(xx, yy, dens.reshape(xx.shape))
         ax.set_axis_off()
         ax.set_title('App.')
-    plt.suptitle('KL$(q\Vert p)$ = {:.5f}'.format(kl))
+    plt.suptitle('KL$(q\Vert p)$ = {:.5f} - Relative ESS: {:.2f}%'.format(kl, ress))
     plt.tight_layout()
-    plt.savefig(os.path.join('images', 'hyper-sphere-density.png'))
+    ln = 'elbo' if args.elbo_loss else 'kl'
+    plt.savefig(os.path.join('images', 'hyper-sphere-density-{}.png'.format(ln)))
+

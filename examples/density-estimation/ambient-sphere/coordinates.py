@@ -1,5 +1,23 @@
+from typing import Tuple
+
 import jax.numpy as jnp
 
+
+def sph2latlon(xsph: jnp.ndarray) -> Tuple[jnp.ndarray]:
+    """Converts a point on the unit sphere into latitude and longitude measured in
+    radians.
+
+    Args:
+        xsph: Observations on the sphere.
+
+    Returns:
+        lat, lon: A tuple containing the latitude and longitude coordinates of the input.
+
+    """
+    x, y, z = xsph[..., 0], xsph[..., 1], xsph[..., 2]
+    lat = jnp.arctan2(z, jnp.sqrt(jnp.square(x) + jnp.square(y)))
+    lon = jnp.arctan2(y, x)
+    return lat, lon
 
 def sph2euclid(theta: jnp.ndarray, phi: jnp.ndarray) -> jnp.ndarray:
     """Parameterize a point on the sphere as two angles in spherical coordinates.

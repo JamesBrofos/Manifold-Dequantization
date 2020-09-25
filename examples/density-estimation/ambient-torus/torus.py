@@ -25,6 +25,8 @@ parser.add_argument('--num-steps', type=int, default=1000, help='Number of gradi
 parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent learning rate')
 parser.add_argument('--num-batch', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--density', type=str, default='correlated', help='Indicator of which density function on the torus to use')
+parser.add_argument('--elbo-loss', type=int, default=1, help='Flag to indicate using the ELBO loss')
+parser.add_argument('--num-importance', type=int, default=20, help='Number of importance samples to draw during training; if the ELBO loss is used, this argument is ignored')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
@@ -163,10 +165,6 @@ def forward(params: Sequence[jnp.ndarray], fns: Sequence[Callable], x:
     y = realnvp.forward(y, 2, params[1], fns[1])
     y = permute.forward(y, perm)
     y = realnvp.forward(y, 2, params[2], fns[2])
-    y = permute.forward(y, perm)
-    y = realnvp.forward(y, 2, params[3], fns[3])
-    y = permute.forward(y, perm)
-    y = realnvp.forward(y, 2, params[4], fns[4])
     return y
 
 def ambient_flow_log_prob(params: Sequence[jnp.ndarray], fns:
@@ -190,14 +188,6 @@ def ambient_flow_log_prob(params: Sequence[jnp.ndarray], fns:
     num_dims = y.shape[-1]
     perm = jnp.array([1, 3, 2, 0])
     fldj = 0.
-    y = realnvp.inverse(y, 2, params[4], fns[4])
-    fldj += realnvp.forward_log_det_jacobian(y, 2, params[4], fns[4])
-    y = permute.inverse(y, perm)
-    fldj += permute.forward_log_det_jacobian()
-    y = realnvp.inverse(y, 2, params[3], fns[3])
-    fldj += realnvp.forward_log_det_jacobian(y, 2, params[3], fns[3])
-    y = permute.inverse(y, perm)
-    fldj += permute.forward_log_det_jacobian()
     y = realnvp.inverse(y, 2, params[2], fns[2])
     fldj += realnvp.forward_log_det_jacobian(y, 2, params[2], fns[2])
     y = permute.inverse(y, perm)
@@ -297,7 +287,8 @@ def negative_elbo(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: 
     return nelbo
 
 def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_samples: int) -> float:
-    """Loss function composed of the evidence lower bound and score matching
+    """Loss function implementation. Depending on the `elbo_loss` command line
+    argument, we will either try to minimize the negative ELBO or the KL(p || q)
     loss.
 
     Args:
@@ -312,14 +303,22 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
         num_samples: Number of samples to draw using rejection sampling.
 
     Returns:
-        nelbo: The negative evidence lower bound.
+        out: The computed loss function.
 
     """
-    rng, rng_rej, rng_elbo, rng_deq = random.split(rng, 4)
-    xang = rejection_sampling(rng_rej, num_samples, torus_density)
-    xtor = ang2euclid(xang)
-    nelbo = negative_elbo(rng_elbo, bij_params, bij_fns, deq_params, deq_fn, xtor).mean()
-    return nelbo
+    if args.elbo_loss:
+        rng, rng_rej, rng_elbo, rng_deq = random.split(rng, 4)
+        xang = rejection_sampling(rng_rej, num_samples, torus_density)
+        xtor = ang2euclid(xang)
+        nelbo = negative_elbo(rng_elbo, bij_params, bij_fns, deq_params, deq_fn, xtor).mean()
+        return nelbo
+    else:
+        rng, rng_rej, rng_is = random.split(rng, 3)
+        xang = rejection_sampling(rng_rej, num_samples, torus_density)
+        xtor = ang2euclid(xang)
+        log_is = importance_log_density(rng_is, bij_params, bij_fns, deq_params, deq_fn, args.num_importance, xtor)
+        log_target = jnp.log(torus_density(xtor))
+        return jnp.mean(log_target - log_is)
 
 @partial(jit, static_argnums=(2, 4, 5, 7))
 def train(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_steps: int, lr: float, num_samples: int) -> Tuple:
@@ -365,7 +364,7 @@ rng, rng_is, rng_kl = random.split(rng, 3)
 
 # Generate the parameters of RealNVP bijectors.
 bij_params, bij_fns = [], []
-for i in range(5):
+for i in range(3):
     p, f = network_factory(random.fold_in(rng_bij, i), 2, 2)
     bij_params.append(p)
     bij_fns.append(f)
@@ -384,7 +383,7 @@ xobs = rejection_sampling(rng_xobs, len(xtor), torus_density)
 # Compute comparison statistics.
 mean_mse = jnp.square(jnp.linalg.norm(xang.mean(0) - xobs.mean(0)))
 cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xang.T) - jnp.cov(xobs.T)))
-approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 100, xtor[:2000])
+approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 1000, xtor[:2000])
 target = embedded_torus_density(xtor[:2000], torus_density)
 Z = jnp.mean(target / approx)
 log_approx = jnp.log(approx)
@@ -418,4 +417,5 @@ axes[3].contourf(xx, yy, aprob.reshape(xx.shape))
 axes[3].set_title('Analytic Density')
 plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f}'.format(mean_mse, cov_mse, kl))
 plt.tight_layout()
-plt.savefig(os.path.join('images', '{}.png'.format(args.density)))
+ln = 'elbo' if args.elbo_loss else 'kl'
+plt.savefig(os.path.join('images', '{}-{}-num-batch-{}-num-importance-{}-num-steps-{}.png'.format(ln, args.density, args.num_batch, args.num_importance, args.num_steps)))

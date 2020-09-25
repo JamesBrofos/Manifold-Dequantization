@@ -6,11 +6,12 @@ from jax import lax, random
 
 import prax.distributions as pd
 
-from coordinates import sph2euclid, hsph2euclid
+from coordinates import sph2euclid, hsph2euclid, sph2latlon
 from globe import is_land
 
+
 def embedded_sphere_density(xsph: jnp.ndarray) -> jnp.ndarray:
-    """Unnormalized correlated density on the sphere.
+    """Unnormalized multimodal density on the sphere.
 
     Args:
         xsph: Observations on the sphere at which to compute the unnormalized
@@ -47,10 +48,10 @@ def embedded_hypersphere_density(xsph: jnp.ndarray) -> jnp.ndarray:
 
 def embedded_earth_density(xsph: jnp.ndarray) -> jnp.ndarray:
     c = 180. / jnp.pi
-    x, y, z = xsph[..., 0], xsph[..., 1], xsph[..., 2]
-    lat = c * jnp.arctan2(z, jnp.sqrt(jnp.square(x) + jnp.square(y)))
-    lng = c * jnp.arctan2(y, x)
-    return 25000. * is_land(lat, lng)
+    lat, lon = sph2latlon(xsph)
+    lat *= c
+    lon *= c
+    return 25000. * is_land(lat, lon)
 
 def rejection_sampling(rng: jnp.ndarray, num_samples: int, num_dims: int, sphere_density: Callable) -> jnp.ndarray:
     """Samples from the sphere in embedded coordinates using the uniform
@@ -152,9 +153,13 @@ if __name__ == '__main__':
     plt.savefig(os.path.join('images', 'rejection-samples.png'))
 
     xsph = rejection_sampling(rng, 10000, 3, embedded_earth_density)
+    lat, lon = sph2latlon(xsph)
     dens = embedded_earth_density(xsph)
-    fig = plt.figure(figsize=(5, 5))
-    ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure(figsize=(10, 5))
+    ax = fig.add_subplot(121, projection='3d')
     ax.plot(xsph[:, 0], xsph[:, 1], xsph[:, 2], '.', alpha=0.1)
     ax.grid(linestyle=':')
+    ax = fig.add_subplot(122, projection='mollweide')
+    ax.plot(lon, lat, '.')
+    plt.tight_layout()
     plt.savefig(os.path.join('images', 'earth-rejection-samples.png'))
