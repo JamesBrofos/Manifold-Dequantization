@@ -8,20 +8,19 @@ import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import jax.scipy.special as jspsp
 import jax.scipy.stats as jspst
-from jax import lax, nn, random
+from jax import lax, nn, random, tree_util
 from jax import grad, jacobian, jit, value_and_grad, vmap
 from jax.experimental import optimizers, stax
 
 import prax.distributions as pd
-import prax.manifolds as pm
 from prax.bijectors import realnvp, permute
 
 from coordinates import ang2euclid, euclid2ang
 from rejection_sampling import correlated_torus_density, embedded_torus_density, multimodal_torus_density, rejection_sampling, unimodal_torus_density
 
 
-parser = argparse.ArgumentParser(description='Density estimation for torus distribution')
-parser.add_argument('--num-steps', type=int, default=1000, help='Number of gradient descent iterations for score matching training')
+parser = argparse.ArgumentParser(description='Dequantization for distributions on the torus')
+parser.add_argument('--num-steps', type=int, default=10000, help='Number of gradient descent iterations for score matching training')
 parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent learning rate')
 parser.add_argument('--num-batch', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--density', type=str, default='correlated', help='Indicator of which density function on the torus to use')
@@ -81,6 +80,7 @@ def importance_density(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_
 
     Returns:
         prob: The importance sampling estimate of the density on the torus.
+
     """
     def step(it: int, p: jnp.ndarray):
         """Calculate the importance sampling estimate of the density for a single point
@@ -165,6 +165,10 @@ def forward(params: Sequence[jnp.ndarray], fns: Sequence[Callable], x:
     y = realnvp.forward(y, 2, params[1], fns[1])
     y = permute.forward(y, perm)
     y = realnvp.forward(y, 2, params[2], fns[2])
+    y = permute.forward(y, perm)
+    y = realnvp.forward(y, 2, params[3], fns[3])
+    y = permute.forward(y, perm)
+    y = realnvp.forward(y, 2, params[4], fns[4])
     return y
 
 def ambient_flow_log_prob(params: Sequence[jnp.ndarray], fns:
@@ -188,6 +192,14 @@ def ambient_flow_log_prob(params: Sequence[jnp.ndarray], fns:
     num_dims = y.shape[-1]
     perm = jnp.array([1, 3, 2, 0])
     fldj = 0.
+    y = realnvp.inverse(y, 2, params[4], fns[4])
+    fldj += realnvp.forward_log_det_jacobian(y, 2, params[4], fns[4])
+    y = permute.inverse(y, perm)
+    fldj += permute.forward_log_det_jacobian()
+    y = realnvp.inverse(y, 2, params[3], fns[3])
+    fldj += realnvp.forward_log_det_jacobian(y, 2, params[3], fns[3])
+    y = permute.inverse(y, perm)
+    fldj += permute.forward_log_det_jacobian()
     y = realnvp.inverse(y, 2, params[2], fns[2])
     fldj += realnvp.forward_log_det_jacobian(y, 2, params[2], fns[2])
     y = permute.inverse(y, perm)
@@ -216,7 +228,7 @@ def sample_ambient(rng: jnp.ndarray, num_samples: int, bij_params:
         num_dims: Dimensionality of samples.
 
     Returns:
-        xamb, xsph: A tuple containing the ambient samples and the projection of
+        xamb, xtor: A tuple containing the ambient samples and the projection of
             the samples to the torus.
 
     """
@@ -320,6 +332,24 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
         log_target = jnp.log(torus_density(xtor))
         return jnp.mean(log_target - log_is)
 
+def clip_and_zero_nans(g: jnp.ndarray) -> jnp.ndarray:
+    """Clip the input to within a certain range and remove the NaNs in a matrix by
+    replacing them with zeros. This function is useful for ensuring stability
+    in gradient descent.
+
+    Args:
+        g: Matrix whose elements should be clipped to within a certain range
+            and whose NaN elements should be replaced by zeros.
+
+    Returns:
+        out: The input matrix but with clipped values and NaN elements replaced
+            by zeros.
+
+    """
+    g = jnp.where(jnp.isnan(g), jnp.zeros_like(g), g)
+    g = jnp.clip(g, -1., 1.)
+    return g
+
 @partial(jit, static_argnums=(2, 4, 5, 7))
 def train(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_steps: int, lr: float, num_samples: int) -> Tuple:
     """Train the ambient flow with the combined loss function.
@@ -348,6 +378,7 @@ def train(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence
         step_rng = random.fold_in(rng, it)
         bij_params, deq_params = get_params(opt_state)
         loss_val, loss_grad = value_and_grad(loss, (1, 3))(step_rng, bij_params, bij_fns, deq_params, deq_fn, num_samples)
+        loss_grad = tree_util.tree_map(clip_and_zero_nans, loss_grad)
         opt_state = opt_update(it, loss_grad, opt_state)
         return opt_state, loss_val
     opt_state, trace = lax.scan(step, opt_init((bij_params, deq_params)), jnp.arange(num_steps))
@@ -364,7 +395,7 @@ rng, rng_is, rng_kl = random.split(rng, 3)
 
 # Generate the parameters of RealNVP bijectors.
 bij_params, bij_fns = [], []
-for i in range(3):
+for i in range(5):
     p, f = network_factory(random.fold_in(rng_bij, i), 2, 2)
     bij_params.append(p)
     bij_fns.append(f)
@@ -375,7 +406,7 @@ deq_params, deq_fn = network_factory(rng_deq, 4, 2)
 # Estimate parameters of the dequantizer and ambient flow.
 (bij_params, deq_params), trace = train(rng_train, bij_params, bij_fns, deq_params, deq_fn, args.num_steps, args.lr, args.num_batch)
 
-# Visualize learned distribution.
+# Sample from the learned distribution.
 xamb, xtor = sample_ambient(rng_xamb, 100000, bij_params, bij_fns, 4)
 xang = euclid2ang(xtor)
 xobs = rejection_sampling(rng_xobs, len(xtor), torus_density)
@@ -383,14 +414,17 @@ xobs = rejection_sampling(rng_xobs, len(xtor), torus_density)
 # Compute comparison statistics.
 mean_mse = jnp.square(jnp.linalg.norm(xang.mean(0) - xobs.mean(0)))
 cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xang.T) - jnp.cov(xobs.T)))
-approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 1000, xtor[:2000])
-target = embedded_torus_density(xtor[:2000], torus_density)
-Z = jnp.mean(target / approx)
+approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 1000, xtor)
+target = embedded_torus_density(xtor, torus_density)
+w = target / approx
+Z = jnp.mean(w)
 log_approx = jnp.log(approx)
 log_target = jnp.log(target)
 kl = jnp.mean(log_approx - log_target) + jnp.log(Z)
+ess = jnp.square(jnp.sum(w)) / jnp.sum(jnp.square(w))
+ress = 100 * ess / len(w)
 
-# Density on a grid.
+# Compute density on a grid.
 lin = jnp.linspace(-jnp.pi, jnp.pi)
 xx, yy = jnp.meshgrid(lin, lin)
 theta = jnp.vstack((xx.ravel(), yy.ravel())).T
@@ -398,6 +432,7 @@ ptor = ang2euclid(theta)
 prob = importance_density(rng_is, bij_params, bij_fns, deq_params, deq_fn, 10000, ptor)
 aprob = torus_density(theta)
 
+# Visualize learned distribution.
 fig, axes = plt.subplots(1, 4, figsize=(16, 5))
 axes[0].plot(trace)
 axes[0].grid(linestyle=':')
@@ -415,7 +450,7 @@ axes[2].contourf(xx, yy, jnp.clip(prob, 0., jnp.quantile(prob, 0.95)).reshape(xx
 axes[2].set_title('Importance Sample Density Estimate')
 axes[3].contourf(xx, yy, aprob.reshape(xx.shape))
 axes[3].set_title('Analytic Density')
-plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f}'.format(mean_mse, cov_mse, kl))
+plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
 plt.tight_layout()
 ln = 'elbo' if args.elbo_loss else 'kl'
-plt.savefig(os.path.join('images', '{}-{}-num-batch-{}-num-importance-{}-num-steps-{}.png'.format(ln, args.density, args.num_batch, args.num_importance, args.num_steps)))
+plt.savefig(os.path.join('images', '{}-{}-num-batch-{}-num-importance-{}-num-steps-{}-seed-{}.png'.format(ln, args.density, args.num_batch, args.num_importance, args.num_steps, args.seed)))

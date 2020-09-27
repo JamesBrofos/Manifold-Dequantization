@@ -19,8 +19,8 @@ parser = argparse.ArgumentParser(description='Mobius spline flow on hypersphere'
 parser.add_argument('--num-steps', type=int, default=10000, help='Number of gradient descent iterations for score matching training')
 parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent learning rate')
 parser.add_argument('--num-samples', type=int, default=100, help='Number of samples per batch')
-parser.add_argument('--num-spline', type=int, default=15, help='Number of intervals in spline flow')
-parser.add_argument('--num-mobius', type=int, default=15, help='Number of Mobius transforms in convex combination')
+parser.add_argument('--num-spline', type=int, default=32, help='Number of intervals in spline flow')
+parser.add_argument('--num-mobius', type=int, default=12, help='Number of Mobius transforms in convex combination')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
@@ -121,7 +121,7 @@ def mobius_conditional(ra: jnp.ndarray, params: Sequence[jnp.ndarray], net: Call
             parameters.
 
     """
-    w = net(params, ra).reshape((-1, 15, 2))
+    w = net(params, ra).reshape((-1, args.num_mobius, 2))
     w = compress(w)
     return w
 

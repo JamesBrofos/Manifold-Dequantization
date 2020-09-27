@@ -32,7 +32,7 @@ def unimodal_torus_density(theta: jnp.ndarray) -> jnp.ndarray:
     """
     p = lambda thetaa, thetab, phia, phib: jnp.exp(jnp.cos(thetaa - phia) + jnp.cos(thetab - phib))
     thetaa, thetab = theta[..., 0], theta[..., 1]
-    return jnp.squeeze(p(thetaa, thetab, 4.18, 5.96))
+    return jnp.squeeze(p(thetaa, thetab, 4.18, 5.96)) / 3.
 
 def multimodal_torus_density(theta: jnp.ndarray) -> jnp.ndarray:
     """Unnormalized multimodal density on the torus.
@@ -64,8 +64,10 @@ def embedded_torus_density(xtor: jnp.ndarray, torus_density: Callable) -> jnp.nd
         out: The density function at the requested locations on the torus.
 
     """
-    # TODO: I don't think any Jacobian correction is required because the
-    # Jacobian determinant will be one.
+    # I don't think any Jacobian correction is required because the Jacobian
+    # determinant will be one. This follows from the observation that the
+    # circumference of a circle is 2pi and the length of the interval [-pi,
+    # +pi] is also 2pi.
     return torus_density(euclid2ang(xtor))
 
 def rejection_sampling(rng: jnp.ndarray, num_samples: int, torus_density: Callable) -> jnp.ndarray:
@@ -73,7 +75,7 @@ def rejection_sampling(rng: jnp.ndarray, num_samples: int, torus_density: Callab
     If we have access to an unnormalized density `f(x)`, we require a constant
     `M` such that `M * q(x) > f(x)` at every point. Since we are using a
     uniform proposal distribution, `q(x) = 1 / (2.*pi)^2` (squared because of
-    two independent components).
+    two angular dimensions, both uniformly sampled).
 
     Args:
         rng: Pseudo-random number generator seed.

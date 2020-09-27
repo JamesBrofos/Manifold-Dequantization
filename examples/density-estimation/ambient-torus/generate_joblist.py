@@ -1,8 +1,12 @@
-job = 'singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python torus.py --num-steps {} --elbo-loss 0 --density {} --num-importance {} --num-batch {}\n'
+jobstr = 'singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python {} --density {} --num-steps 10000 --elbo-loss {} --num-importance {} --lr 1e-5 --seed {}\n'
 
 with open('joblist.txt', 'w') as f:
-    for dens in ['unimodal', 'multimodal', 'correlated']:
-        for num_steps in [1000, 5000, 10000]:
-            for num_imp in [10, 20, 30, 40]:
-                for num_batch in [100, 500, 1000]:
-                    f.write(job.format(num_steps, dens, num_imp, num_batch))
+    for elbo in [0, 1]:
+        for fn in ['torus.py', 'autoregressive.py']:
+            for density in ['correlated', 'multimodal', 'unimodal']:
+                for seed in range(5):
+                    if elbo == 0:
+                        for num_importance in [10, 20, 50, 100]:
+                            f.write(jobstr.format(fn, density, elbo, num_importance, seed))
+                    else:
+                        f.write(jobstr.format(fn, density, elbo, 0, seed))

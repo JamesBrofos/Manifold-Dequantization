@@ -14,6 +14,9 @@ from coordinates import ang2euclid
 from mobius import mobius_flow, mobius_log_prob
 
 parser = argparse.ArgumentParser(description='Mobius Flows on the Torus')
+parser.add_argument('--num-steps', type=int, default=10000, help='Number of gradient descent iterations for score matching training')
+parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent learning rate')
+parser.add_argument('--num-batch', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--density', type=str, default='unimodal', help='Indicator for which density to estimate')
 args = parser.parse_args()
 
@@ -149,11 +152,7 @@ rng, rng_train = random.split(rng, 2)
 params, fn = network_factory(rng_net, 2, 15*2)
 wa = random.normal(rng_wa, [15, 2])
 wa = compress(wa)
-
-num_samples = 100
-num_steps = 5000
-lr = 1e-3
-(wa, params), trace = train(rng, wa, params, fn, num_samples, num_steps, lr)
+(wa, params), trace = train(rng, wa, params, fn, args.num_batch, args.num_steps, args.lr)
 
 (thetaa, thetab), (unifa, unifb), wb = sample_torus(rng_torus, wa, params, fn, 100000)
 theta = jnp.stack([thetaa, thetab], axis=-1)
@@ -162,8 +161,11 @@ log_approx = torus_log_prob(wa, wb, unifa, unifb, thetaa, thetab)
 approx = jnp.exp(log_approx)
 target = torus_density(theta)
 log_target = jnp.log(target)
-Z = jnp.mean(target / approx)
+w = target / approx
+Z = jnp.mean(w)
 kl = jnp.mean(log_approx - log_target) + jnp.log(Z)
+ess = jnp.square(jnp.sum(w)) / jnp.sum(jnp.square(w))
+ress = 100 * ess / len(w)
 
 fig, axes = plt.subplots(1, 4, figsize=(13, 4))
 axes[0].hist2d(thetaa, thetab, density=True, bins=50)
@@ -175,6 +177,6 @@ axes[2].plot(thetaa, jnp.exp(lpa), '.')
 axes[2].grid(linestyle=':')
 axes[3].plot(trace)
 axes[3].grid(linestyle=':')
-plt.suptitle('KL$(q\Vert p)$ = {:.5f}'.format(kl))
+plt.suptitle('KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(kl, ress))
 plt.tight_layout()
 plt.savefig(os.path.join('images', 'torus-{}-density.png'.format(args.density)))

@@ -19,8 +19,8 @@ parser = argparse.ArgumentParser(description='Mobius spline flow on hypersphere'
 parser.add_argument('--num-steps', type=int, default=10000, help='Number of gradient descent iterations for score matching training')
 parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent learning rate')
 parser.add_argument('--num-samples', type=int, default=100, help='Number of samples per batch')
-parser.add_argument('--num-spline', type=int, default=15, help='Number of intervals in spline flow')
-parser.add_argument('--num-mobius', type=int, default=15, help='Number of Mobius transforms in convex combination')
+parser.add_argument('--num-spline', type=int, default=64, help='Number of intervals in spline flow')
+parser.add_argument('--num-mobius', type=int, default=32, help='Number of Mobius transforms in convex combination')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
@@ -149,7 +149,7 @@ def mobius_conditional(ra: jnp.ndarray, rb: jnp.ndarray, paramsm: Sequence[jnp.n
 
     """
     x = jnp.stack((ra, rb), axis=-1)
-    w = netm(paramsm, x).reshape((-1, 15, 2))
+    w = netm(paramsm, x).reshape((-1, args.num_mobius, 2))
     w = compress(w)
     return w
 
@@ -268,7 +268,6 @@ def train(rng: jnp.ndarray,
     opt_state, trace = lax.scan(step, opt_init(params), jnp.arange(num_steps))
     thetax, thetay, thetad, paramsm, paramsr = get_params(opt_state)
     return (thetax, thetay, thetad, paramsm, paramsr), trace
-
 
 
 rng = random.PRNGKey(0)
