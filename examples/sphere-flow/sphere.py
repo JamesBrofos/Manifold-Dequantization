@@ -6,7 +6,7 @@ from typing import Callable, Sequence, Tuple
 import matplotlib.pyplot as plt
 
 import jax.numpy as jnp
-from jax import lax, nn, random
+from jax import lax, nn, random, tree_util
 from jax import grad, jit, value_and_grad, vmap
 from jax.experimental import optimizers, stax
 
@@ -16,11 +16,12 @@ from spline import rational_quadratic, grad_rational_quadratic
 
 
 parser = argparse.ArgumentParser(description='Mobius spline flow on hypersphere')
-parser.add_argument('--num-steps', type=int, default=10000, help='Number of gradient descent iterations for score matching training')
+parser.add_argument('--num-steps', type=int, default=20000, help='Number of gradient descent iterations for score matching training')
 parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent learning rate')
 parser.add_argument('--num-samples', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--num-spline', type=int, default=32, help='Number of intervals in spline flow')
 parser.add_argument('--num-mobius', type=int, default=12, help='Number of Mobius transforms in convex combination')
+parser.add_argument('--num-hidden', type=int, default=512, help='Number of hidden units used in the neural networks')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
@@ -43,13 +44,14 @@ def sphere_density(xsph: jnp.ndarray) -> jnp.ndarray:
     mud = sph2euclid(-0.7, 4.)
     return p(xsph, mua) + p(xsph, mub) + p(xsph, muc) + p(xsph, mud)
 
-def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
+def network_factory(rng: jnp.ndarray, num_in: int, num_out: int, num_hidden: int) -> Tuple:
     """Factory for producing neural networks and their parameterizations.
 
     Args:
         rng: Pseudo-random number generator seed.
         num_in: Number of inputs to the network.
         num_out: Number of output variables.
+        num_hidden: Number of hidden units in the hidden layer.
 
     Returns:
         out: A tuple containing the network parameters and a callable function
@@ -57,8 +59,8 @@ def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
 
     """
     params_init, net = stax.serial(
-        stax.Dense(512), stax.Relu,
-        stax.Dense(512), stax.Relu,
+        stax.Dense(num_hidden), stax.Relu,
+        stax.Dense(num_hidden), stax.Relu,
         stax.Dense(num_out))
     _, params = params_init(rng, (-1, num_in))
     return params, net
@@ -228,10 +230,18 @@ rng, rng_netm = random.split(rng, 2)
 rng, rng_thetax, rng_thetay, rng_thetad = random.split(rng, 4)
 rng, rng_ms, rng_train = random.split(rng, 3)
 
-paramsm, netm = network_factory(rng_netm, 1, args.num_mobius*2)
+paramsm, netm = network_factory(rng_netm, 1, args.num_mobius*2, args.num_hidden)
 thetax = random.uniform(rng_thetax, [args.num_spline])
 thetay = random.uniform(rng_thetay, [args.num_spline])
 thetad = random.uniform(rng_thetad, [args.num_spline - 1])
+
+# Compute number of parameters.
+count = lambda x: jnp.prod(jnp.array(x.shape))
+num_paramsm = jnp.array(tree_util.tree_map(count, tree_util.tree_flatten(paramsm)[0])).sum()
+num_theta = count(thetax) + count(thetay) + count(thetad)
+num_params = num_theta + num_paramsm
+print('number of parameters: {}'.format(num_params))
+
 
 (thetax, thetay, thetad, paramsm), trace = train(rng_train, thetax, thetay, thetad, paramsm, netm, args.num_samples, args.num_steps, args.lr)
 num_samples = 100000

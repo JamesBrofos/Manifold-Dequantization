@@ -20,20 +20,23 @@ from rejection_sampling import correlated_torus_density, embedded_torus_density,
 
 
 parser = argparse.ArgumentParser(description='Dequantization for distributions on the torus')
-parser.add_argument('--num-steps', type=int, default=10000, help='Number of gradient descent iterations for score matching training')
+parser.add_argument('--num-steps', type=int, default=20000, help='Number of gradient descent iterations for score matching training')
 parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent learning rate')
 parser.add_argument('--num-batch', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--density', type=str, default='correlated', help='Indicator of which density function on the torus to use')
 parser.add_argument('--elbo-loss', type=int, default=1, help='Flag to indicate using the ELBO loss')
 parser.add_argument('--num-importance', type=int, default=20, help='Number of importance samples to draw during training; if the ELBO loss is used, this argument is ignored')
+parser.add_argument('--num-hidden', type=int, default=512, help='Number of hidden units used in the neural networks')
+parser.add_argument('--beta', type=float, default=1., help='Density concentration parameter')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
-torus_density = {
+torus_density_uw = {
     'correlated': correlated_torus_density,
     'multimodal': multimodal_torus_density,
     'unimodal': unimodal_torus_density
 }[args.density]
+torus_density = lambda theta: jnp.exp(args.beta * jnp.log(torus_density_uw(theta)))
 
 def importance_log_density(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_is: int, xtor: jnp.ndarray) -> jnp.ndarray:
     """Use importance samples to estimate the log-density on the torus.
@@ -103,7 +106,7 @@ def importance_density(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_
     _, prob = lax.scan(step, 0, xtor)
     return prob
 
-def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
+def network_factory(rng: jnp.ndarray, num_in: int, num_out: int, num_hidden: int) -> Tuple:
     """Factory for producing neural networks and their parameterizations.
 
     Args:
@@ -111,6 +114,7 @@ def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
         num_in: Number of inputs to the network.
         num_out: Number of variables to transform by an affine transformation.
             Each variable receives an associated shift and scale.
+        num_hidden: Number of hidden units in the hidden layer.
 
     Returns:
         out: A tuple containing the network parameters and a callable function
@@ -118,8 +122,8 @@ def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
 
     """
     params_init, fn = stax.serial(
-        stax.Dense(512), stax.Relu,
-        stax.Dense(512), stax.Relu,
+        stax.Dense(num_hidden), stax.Relu,
+        stax.Dense(num_hidden), stax.Relu,
         stax.FanOut(2),
         stax.parallel(stax.Dense(num_out),
                       stax.serial(stax.Dense(num_out), stax.Softplus)))
@@ -320,13 +324,13 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
     """
     if args.elbo_loss:
         rng, rng_rej, rng_elbo, rng_deq = random.split(rng, 4)
-        xang = rejection_sampling(rng_rej, num_samples, torus_density)
+        xang = rejection_sampling(rng_rej, num_samples, torus_density, args.beta)
         xtor = ang2euclid(xang)
         nelbo = negative_elbo(rng_elbo, bij_params, bij_fns, deq_params, deq_fn, xtor).mean()
         return nelbo
     else:
         rng, rng_rej, rng_is = random.split(rng, 3)
-        xang = rejection_sampling(rng_rej, num_samples, torus_density)
+        xang = rejection_sampling(rng_rej, num_samples, torus_density, args.beta)
         xtor = ang2euclid(xang)
         log_is = importance_log_density(rng_is, bij_params, bij_fns, deq_params, deq_fn, args.num_importance, xtor)
         log_target = jnp.log(torus_density(xtor))
@@ -396,12 +400,23 @@ rng, rng_is, rng_kl = random.split(rng, 3)
 # Generate the parameters of RealNVP bijectors.
 bij_params, bij_fns = [], []
 for i in range(5):
-    p, f = network_factory(random.fold_in(rng_bij, i), 2, 2)
+    p, f = network_factory(random.fold_in(rng_bij, i), 2, 2, args.num_hidden)
     bij_params.append(p)
     bij_fns.append(f)
 
 # Parameterize the mean and scale of a log-normal multiplicative dequantizer.
-deq_params, deq_fn = network_factory(rng_deq, 4, 2)
+deq_params, deq_fn = network_factory(rng_deq, 4, 2, args.num_hidden)
+
+# May need to reduce scale of initial parameters for stability.
+bij_params = tree_util.tree_map(lambda x: x / 2., bij_params)
+deq_params = tree_util.tree_map(lambda x: x / 1., deq_params)
+
+# Compute the number of parameters.
+count = lambda x: jnp.prod(jnp.array(x.shape))
+num_bij_params = jnp.array(tree_util.tree_map(count, tree_util.tree_flatten(bij_params)[0])).sum()
+num_deq_params = jnp.array(tree_util.tree_map(count, tree_util.tree_flatten(deq_params)[0])).sum()
+num_params = num_bij_params + num_deq_params
+print('dequantization parameters: {} - ambient parameters: {} - number of parameters: {}'.format(num_deq_params, num_bij_params, num_params))
 
 # Estimate parameters of the dequantizer and ambient flow.
 (bij_params, deq_params), trace = train(rng_train, bij_params, bij_fns, deq_params, deq_fn, args.num_steps, args.lr, args.num_batch)
@@ -409,7 +424,7 @@ deq_params, deq_fn = network_factory(rng_deq, 4, 2)
 # Sample from the learned distribution.
 xamb, xtor = sample_ambient(rng_xamb, 100000, bij_params, bij_fns, 4)
 xang = euclid2ang(xtor)
-xobs = rejection_sampling(rng_xobs, len(xtor), torus_density)
+xobs = rejection_sampling(rng_xobs, len(xtor), torus_density, args.beta)
 
 # Compute comparison statistics.
 mean_mse = jnp.square(jnp.linalg.norm(xang.mean(0) - xobs.mean(0)))
@@ -417,11 +432,11 @@ cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xang.T) - jnp.cov(xobs.T)))
 approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 1000, xtor)
 target = embedded_torus_density(xtor, torus_density)
 w = target / approx
-Z = jnp.mean(w)
+Z = jnp.nanmean(w)
 log_approx = jnp.log(approx)
 log_target = jnp.log(target)
-kl = jnp.mean(log_approx - log_target) + jnp.log(Z)
-ess = jnp.square(jnp.sum(w)) / jnp.sum(jnp.square(w))
+kl = jnp.nanmean(log_approx - log_target) + jnp.log(Z)
+ess = jnp.square(jnp.nansum(w)) / jnp.nansum(jnp.square(w))
 ress = 100 * ess / len(w)
 
 # Compute density on a grid.
@@ -453,4 +468,4 @@ axes[3].set_title('Analytic Density')
 plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
 plt.tight_layout()
 ln = 'elbo' if args.elbo_loss else 'kl'
-plt.savefig(os.path.join('images', '{}-{}-num-batch-{}-num-importance-{}-num-steps-{}-seed-{}.png'.format(ln, args.density, args.num_batch, args.num_importance, args.num_steps, args.seed)))
+plt.savefig(os.path.join('images', '{}-{}-beta-{}-num-batch-{}-num-importance-{}-num-steps-{}-seed-{}.png'.format(ln, args.beta, args.density, args.num_batch, args.num_importance, args.num_steps, args.seed)))

@@ -6,7 +6,7 @@ from typing import Callable, Sequence, Tuple
 import matplotlib.pyplot as plt
 
 import jax.numpy as jnp
-from jax import lax, random
+from jax import lax, random, tree_util
 from jax import jit, value_and_grad, vmap
 from jax.experimental import optimizers, stax
 
@@ -14,10 +14,14 @@ from coordinates import ang2euclid
 from mobius import mobius_flow, mobius_log_prob
 
 parser = argparse.ArgumentParser(description='Mobius Flows on the Torus')
-parser.add_argument('--num-steps', type=int, default=10000, help='Number of gradient descent iterations for score matching training')
+parser.add_argument('--num-steps', type=int, default=20000, help='Number of gradient descent iterations for score matching training')
 parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent learning rate')
 parser.add_argument('--num-batch', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--density', type=str, default='unimodal', help='Indicator for which density to estimate')
+parser.add_argument('--num-mobius', type=int, default=9, help='Number of Mobius transforms in convex combination')
+parser.add_argument('--num-hidden', type=int, default=512, help='Number of hidden units used in the neural networks')
+parser.add_argument('--beta', type=float, default=1., help='Density concentration parameter')
+parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
 
@@ -65,19 +69,21 @@ def multimodal_torus_density(theta: jnp.ndarray) -> jnp.ndarray:
              p(thetaa, thetab, 3.77, 1.56)) / 3.
     return jnp.squeeze(uprob)
 
-torus_density = {
+torus_density_uw = {
     'unimodal': unimodal_torus_density,
     'correlated': correlated_torus_density,
     'multimodal': multimodal_torus_density
 }[args.density]
+torus_density = lambda theta: jnp.exp(args.beta * jnp.log(torus_density_uw(theta)))
 
-def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
+def network_factory(rng: jnp.ndarray, num_in: int, num_out: int, num_hidden: int) -> Tuple:
     """Factory for producing neural networks and their parameterizations.
 
     Args:
         rng: Pseudo-random number generator seed.
         num_in: Number of inputs to the network.
         num_out: Number of output variables.
+        num_hidden: Number of hidden units in the hidden layer.
 
     Returns:
         out: A tuple containing the network parameters and a callable function
@@ -85,8 +91,8 @@ def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
 
     """
     params_init, fn = stax.serial(
-        stax.Dense(512), stax.Relu,
-        stax.Dense(512), stax.Relu,
+        stax.Dense(num_hidden), stax.Relu,
+        stax.Dense(num_hidden), stax.Relu,
         stax.Dense(num_out))
     _, params = params_init(rng, (-1, num_in))
     return params, fn
@@ -99,7 +105,7 @@ def conditional(theta: jnp.ndarray, params: Sequence[jnp.ndarray], fn: Callable)
 
     """
     x = ang2euclid(theta)
-    w = fn(params, ang2euclid(theta)).reshape((-1, 15, 2))
+    w = fn(params, ang2euclid(theta)).reshape((-1, args.num_mobius, 2))
     w = compress(w)
     return w
 
@@ -113,17 +119,18 @@ def torus_log_prob(wa, wb, unifa, unifb, thetaa, thetab):
     log_prob = lpa + lpb
     return log_prob
 
-def sample_torus(rng, wa, params, fn, num_samples):
+def sample_torus(rng, omega, params, fn, num_samples):
     rng, rng_unifa, rng_unifb = random.split(rng, 3)
     unifa = 2.0*jnp.pi*random.uniform(rng_unifa, [num_samples])
     unifb = 2.0*jnp.pi*random.uniform(rng_unifb, [num_samples])
+    wa = compress(omega)
     thetaa = mobius_flow(unifa, wa).mean(0)
     wb = conditional(thetaa, params, fn)
     thetab = vmap(mobius_flow, in_axes=(0, 0))(unifb, wb).mean(1)
-    return (thetaa, thetab), (unifa, unifb), wb
+    return (thetaa, thetab), (unifa, unifb), (wa, wb)
 
-def loss(rng, wa, params, fn, num_samples):
-    (thetaa, thetab), (unifa, unifb), wb = sample_torus(rng, wa, params, fn, num_samples)
+def loss(rng, omega, params, fn, num_samples):
+    (thetaa, thetab), (unifa, unifb), (wa, wb) = sample_torus(rng, omega, params, fn, num_samples)
     theta = jnp.stack([thetaa, thetab], axis=-1)
     mlp = torus_log_prob(wa, wb, unifa, unifb, thetaa, thetab)
     target = torus_density(theta)
@@ -131,30 +138,37 @@ def loss(rng, wa, params, fn, num_samples):
     return jnp.mean(mlp - log_target)
 
 @partial(jit, static_argnums=(3, 4, 5))
-def train(rng, wa, params, fn, num_samples, num_steps, lr):
+def train(rng, omega, params, fn, num_samples, num_steps, lr):
     opt_init, opt_update, get_params = optimizers.adam(lr)
     def step(opt_state, it):
         step_rng = random.fold_in(rng, it)
-        wa, params = get_params(opt_state)
-        loss_val, loss_grad = value_and_grad(loss, (1, 2))(step_rng, wa, params, fn, num_samples)
+        omega, params = get_params(opt_state)
+        loss_val, loss_grad = value_and_grad(loss, (1, 2))(step_rng, omega, params, fn, num_samples)
         opt_state = opt_update(it, loss_grad, opt_state)
         return opt_state, loss_val
-    opt_state, trace = lax.scan(step, opt_init((wa, params)), jnp.arange(num_steps))
+    opt_state, trace = lax.scan(step, opt_init((omega, params)), jnp.arange(num_steps))
     wa, params = get_params(opt_state)
     return (wa, params), trace
 
 
-rng = random.PRNGKey(0)
+rng = random.PRNGKey(args.seed)
 rng, rng_torus = random.split(rng, 2)
 rng, rng_wa, rng_net = random.split(rng, 3)
 rng, rng_train = random.split(rng, 2)
 
-params, fn = network_factory(rng_net, 2, 15*2)
-wa = random.normal(rng_wa, [15, 2])
-wa = compress(wa)
-(wa, params), trace = train(rng, wa, params, fn, args.num_batch, args.num_steps, args.lr)
+params, fn = network_factory(rng_net, 2, args.num_mobius*2, args.num_hidden)
+omega = random.normal(rng_wa, [args.num_mobius, 2])
 
-(thetaa, thetab), (unifa, unifb), wb = sample_torus(rng_torus, wa, params, fn, 100000)
+# Compute number of parameters.
+count = lambda x: jnp.prod(jnp.array(x.shape))
+num_params_net = jnp.array(tree_util.tree_map(count, tree_util.tree_flatten(params)[0])).sum()
+num_omega = count(omega)
+num_params = num_params_net + num_omega
+print('number of parameters: {}'.format(num_params))
+
+(omega, params), trace = train(rng, omega, params, fn, args.num_batch, args.num_steps, args.lr)
+
+(thetaa, thetab), (unifa, unifb), (wa, wb) = sample_torus(rng_torus, omega, params, fn, 100000)
 theta = jnp.stack([thetaa, thetab], axis=-1)
 lpa = mobius_log_prob(unifa, wa)
 log_approx = torus_log_prob(wa, wb, unifa, unifb, thetaa, thetab)

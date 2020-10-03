@@ -70,7 +70,7 @@ def embedded_torus_density(xtor: jnp.ndarray, torus_density: Callable) -> jnp.nd
     # +pi] is also 2pi.
     return torus_density(euclid2ang(xtor))
 
-def rejection_sampling(rng: jnp.ndarray, num_samples: int, torus_density: Callable) -> jnp.ndarray:
+def rejection_sampling(rng: jnp.ndarray, num_samples: int, torus_density: Callable, beta: float) -> jnp.ndarray:
     """Sample from the torus via a uniform distribution on the angular coordinates.
     If we have access to an unnormalized density `f(x)`, we require a constant
     `M` such that `M * q(x) > f(x)` at every point. Since we are using a
@@ -82,13 +82,14 @@ def rejection_sampling(rng: jnp.ndarray, num_samples: int, torus_density: Callab
         num_samples: Number of samples to attempt draw. The number of samples
             returned may be smaller since some samples will be rejected.
         torus_density: The density on the torus from which to generate samples.
+        beta: Density concentration parameter.
 
     Returns:
         samples: Samples from the distribution on the torus.
 
     """
     # Precompute certain quantities used in rejection sampling.
-    M = jnp.square(2.*jnp.pi) * 3.
+    M = jnp.square(2.*jnp.pi) * jnp.exp(beta * jnp.log(3.))
     denom = M / jnp.square(2.*jnp.pi)
 
     def cond(val):

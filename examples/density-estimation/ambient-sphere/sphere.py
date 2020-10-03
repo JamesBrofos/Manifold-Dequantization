@@ -28,6 +28,8 @@ parser.add_argument('--num-batch', type=int, default=100, help='Number of sample
 parser.add_argument('--density', type=str, default='sphere', help='Indicator of which density function on the sphere to use')
 parser.add_argument('--elbo-loss', type=int, default=1, help='Flag to indicate using the ELBO loss')
 parser.add_argument('--num-importance', type=int, default=20, help='Number of importance samples to draw during training; if the ELBO loss is used, this argument is ignored')
+parser.add_argument('--num-hidden', type=int, default=512, help='Number of hidden units used in the neural networks')
+parser.add_argument('--num-realnvp', type=int, default=5, help='Number of RealNVP bijectors to employ')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
@@ -105,7 +107,7 @@ def importance_density(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_
     _, prob = lax.scan(step, 0, xsph)
     return prob
 
-def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
+def network_factory(rng: jnp.ndarray, num_in: int, num_out: int, num_hidden: int) -> Tuple:
     """Factory for producing neural networks and their parameterizations.
 
     Args:
@@ -113,6 +115,7 @@ def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
         num_in: Number of inputs to the network.
         num_out: Number of variables to transform by an affine transformation.
             Each variable receives an associated shift and scale.
+        num_hidden: Number of hidden units in the hidden layer.
 
     Returns:
         out: A tuple containing the network parameters and a callable function
@@ -120,8 +123,8 @@ def network_factory(rng: jnp.ndarray, num_in: int, num_out: int) -> Tuple:
 
     """
     params_init, fn = stax.serial(
-        stax.Dense(512), stax.Relu,
-        stax.Dense(512), stax.Relu,
+        stax.Dense(num_hidden), stax.Relu,
+        stax.Dense(num_hidden), stax.Relu,
         stax.FanOut(2),
         stax.parallel(stax.Dense(num_out),
                       stax.serial(stax.Dense(num_out), stax.Softplus)))
@@ -161,15 +164,26 @@ def forward(params: Sequence[jnp.ndarray], fns: Sequence[Callable], x:
     num_dims = x.shape[-1]
     num_masked = num_dims - 2
     perm = jnp.roll(jnp.arange(num_dims), 1)
-    y = realnvp.forward(x, num_masked, params[0], fns[0])
-    y = permute.forward(y, perm)
-    y = realnvp.forward(y, num_masked, params[1], fns[1])
-    y = permute.forward(y, perm)
-    y = realnvp.forward(y, num_masked, params[2], fns[2])
-    y = permute.forward(y, perm)
-    y = realnvp.forward(y, num_masked, params[3], fns[3])
-    y = permute.forward(y, perm)
-    y = realnvp.forward(y, num_masked, params[4], fns[4])
+    y = x
+    # for i in range(args.num_realnvp):
+    #     y = realnvp.forward(y, num_masked, params[i], fns[i])
+    #     if i < (args.num_realnvp - 1):
+    #         y = permute.forward(y, perm)
+
+    for i in range(args.num_realnvp):
+        y = realnvp.forward(y, num_masked, params[i], fns[i])
+        y = permute.forward(y, perm)
+
+
+    # y = realnvp.forward(x, num_masked, params[0], fns[0])
+    # y = permute.forward(y, perm)
+    # y = realnvp.forward(y, num_masked, params[1], fns[1])
+    # y = permute.forward(y, perm)
+    # y = realnvp.forward(y, num_masked, params[2], fns[2])
+    # y = permute.forward(y, perm)
+    # y = realnvp.forward(y, num_masked, params[3], fns[3])
+    # y = permute.forward(y, perm)
+    # y = realnvp.forward(y, num_masked, params[4], fns[4])
     return y
 
 def ambient_flow_log_prob(params: Sequence[jnp.ndarray], fns:
@@ -194,24 +208,32 @@ def ambient_flow_log_prob(params: Sequence[jnp.ndarray], fns:
     num_masked = num_dims - 2
     perm = jnp.roll(jnp.arange(num_dims), 1)
     fldj = 0.
-    y = realnvp.inverse(y, num_masked, params[4], fns[4])
-    fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[4], fns[4])
-    y = permute.inverse(y, perm)
-    fldj += permute.forward_log_det_jacobian()
-    y = realnvp.inverse(y, num_masked, params[3], fns[3])
-    fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[3], fns[3])
-    y = permute.inverse(y, perm)
-    fldj += permute.forward_log_det_jacobian()
-    y = realnvp.inverse(y, num_masked, params[2], fns[2])
-    fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[2], fns[2])
-    y = permute.inverse(y, perm)
-    fldj += permute.forward_log_det_jacobian()
-    y = realnvp.inverse(y, num_masked, params[1], fns[1])
-    fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[1], fns[1])
-    y = permute.inverse(y, perm)
-    fldj += permute.forward_log_det_jacobian()
-    y = realnvp.inverse(y, num_masked, params[0], fns[0])
-    fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[0], fns[0])
+
+    for i in reversed(range(args.num_realnvp)):
+        y = permute.inverse(y, perm)
+        fldj += permute.forward_log_det_jacobian()
+        y = realnvp.inverse(y, num_masked, params[i], fns[i])
+        fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[i], fns[i])
+
+    # y = realnvp.inverse(y, num_masked, params[4], fns[4])
+    # fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[4], fns[4])
+    # y = permute.inverse(y, perm)
+    # fldj += permute.forward_log_det_jacobian()
+    # y = realnvp.inverse(y, num_masked, params[3], fns[3])
+    # fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[3], fns[3])
+    # y = permute.inverse(y, perm)
+    # fldj += permute.forward_log_det_jacobian()
+    # y = realnvp.inverse(y, num_masked, params[2], fns[2])
+    # fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[2], fns[2])
+    # y = permute.inverse(y, perm)
+    # fldj += permute.forward_log_det_jacobian()
+    # y = realnvp.inverse(y, num_masked, params[1], fns[1])
+    # fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[1], fns[1])
+    # y = permute.inverse(y, perm)
+    # fldj += permute.forward_log_det_jacobian()
+    # y = realnvp.inverse(y, num_masked, params[0], fns[0])
+    # fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[0], fns[0])
+
     logprob = jspst.multivariate_normal.logpdf(y, jnp.zeros((num_dims, )), 1.)
     return logprob - fldj
 
@@ -324,17 +346,23 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
         log_target = jnp.log(sphere_density(xsph))
         return jnp.mean(log_target - log_is)
 
-def zero_nans(g):
-    """Remove the NaNs in a matrix by replaceing them with zeros.
+def clip_and_zero_nans(g: jnp.ndarray) -> jnp.ndarray:
+    """Clip the input to within a certain range and remove the NaNs in a matrix by
+    replacing them with zeros. This function is useful for ensuring stability
+    in gradient descent.
 
     Args:
-        g: Matrix whose NaN elements should be replaced by zeros.
+        g: Matrix whose elements should be clipped to within a certain range
+            and whose NaN elements should be replaced by zeros.
 
     Returns:
-        out: The input matrix but with NaN elements replaced by zeros.
+        out: The input matrix but with clipped values and NaN elements replaced
+            by zeros.
 
     """
-    return jnp.where(jnp.isnan(g), jnp.zeros_like(g), g)
+    g = jnp.where(jnp.isnan(g), jnp.zeros_like(g), g)
+    g = jnp.clip(g, -1., 1.)
+    return g
 
 @partial(jit, static_argnums=(2, 4, 5, 7))
 def train(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_steps: int, lr: float, num_samples: int) -> Tuple:
@@ -364,7 +392,7 @@ def train(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence
         step_rng = random.fold_in(rng, it)
         bij_params, deq_params = get_params(opt_state)
         loss_val, loss_grad = value_and_grad(loss, (1, 3))(step_rng, bij_params, bij_fns, deq_params, deq_fn, num_samples)
-        loss_grad = tree_util.tree_map(zero_nans, loss_grad)
+        loss_grad = tree_util.tree_map(clip_and_zero_nans, loss_grad)
         opt_state = opt_update(it, loss_grad, opt_state)
         return opt_state, loss_val
     opt_state, trace = lax.scan(step, opt_init((bij_params, deq_params)), jnp.arange(num_steps))
@@ -381,13 +409,24 @@ rng, rng_is, rng_kl, rng_mw = random.split(rng, 4)
 
 # Generate the parameters of RealNVP bijectors.
 bij_params, bij_fns = [], []
-for i in range(5):
-    p, f = network_factory(random.fold_in(rng_bij, i), num_dims - 2, 2)
+for i in range(args.num_realnvp):
+    p, f = network_factory(random.fold_in(rng_bij, i), num_dims - 2, 2, args.num_hidden)
     bij_params.append(p)
     bij_fns.append(f)
 
 # Parameterize the mean and scale of a log-normal multiplicative dequantizer.
-deq_params, deq_fn = network_factory(rng_deq, num_dims, 1)
+deq_params, deq_fn = network_factory(rng_deq, num_dims, 1, args.num_hidden)
+
+# May need to reduce scale of initial parameters for stability.
+bij_params = tree_util.tree_map(lambda x: x / 2., bij_params)
+deq_params = tree_util.tree_map(lambda x: x / 1., deq_params)
+
+# Compute the number of parameters.
+count = lambda x: jnp.prod(jnp.array(x.shape))
+num_bij_params = jnp.array(tree_util.tree_map(count, tree_util.tree_flatten(bij_params)[0])).sum()
+num_deq_params = jnp.array(tree_util.tree_map(count, tree_util.tree_flatten(deq_params)[0])).sum()
+num_params = num_bij_params + num_deq_params
+print('dequantization parameters: {} - ambient parameters: {} - number of parameters: {}'.format(num_deq_params, num_bij_params, num_params))
 
 # Estimate parameters of the dequantizer and ambient flow.
 (bij_params, deq_params), trace = train(rng_train, bij_params, bij_fns, deq_params, deq_fn, args.num_steps, args.lr, args.num_batch)
@@ -399,14 +438,14 @@ xobs = rejection_sampling(rng_xobs, len(xsph), num_dims, sphere_density)
 # Compute comparison statistics.
 mean_mse = jnp.square(jnp.linalg.norm(xsph.mean(0) - xobs.mean(0)))
 cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xsph.T) - jnp.cov(xobs.T)))
-approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 100, xsph)
+approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 1000, xsph)
 target = sphere_density(xsph)
 w = target / approx
-Z = jnp.mean(w)
+Z = jnp.nanmean(w)
 log_approx = jnp.log(approx)
 log_target = jnp.log(target)
-kl = jnp.mean(log_approx - log_target) + jnp.log(Z)
-ess = jnp.square(jnp.sum(w)) / jnp.sum(jnp.square(w))
+kl = jnp.nanmean(log_approx - log_target) + jnp.log(Z)
+ess = jnp.square(jnp.nansum(w)) / jnp.nansum(jnp.square(w))
 ress = 100 * ess / len(w)
 print('estimate KL(q||p): {:.5f} - relative effective sample size: {:.2f}%'.format(kl, ress))
 

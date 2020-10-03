@@ -73,7 +73,6 @@ def rejection_sampling(rng: jnp.ndarray, num_samples: int, num_dims: int, sphere
     # >>> rng = random.PRNGKey(0)
     # >>> embedded_sphere_density(pd.sphere.haarsph(rng, [10000000, 3])).max()
     prop_dens = jnp.exp(pd.sphere.haarsphlogdensity(jnp.array([0., 0., 1.])))
-    # M = 22355. / prop_dens
     M = 25000. / prop_dens
     denom = M * prop_dens
 
