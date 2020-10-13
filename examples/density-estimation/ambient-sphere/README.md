@@ -35,10 +35,3 @@ We next consider the density defined on page 14 of Normalizing Flows on Tori and
 As in the case of the 2-sphere, it appears that training with KL-divergence yields better KL(q || p) and ESS metrics. We again compare against Mobius spline flows. I find that the Mobius-spline flow performs worse in KL and ESS.
 
 ![](images/hypersphere-mobius-spline.png)
-
-## Extra Commands
-
-
-```
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python sphere.py --num-steps 20000 --density sphere --elbo-loss 0 --lr 1e-4 --num-importance 10 --num-realnvp 5 --num-hidden 25
-```

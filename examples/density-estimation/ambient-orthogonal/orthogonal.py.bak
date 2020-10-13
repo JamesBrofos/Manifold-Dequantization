@@ -1,0 +1,352 @@
+import argparse
+from functools import partial
+from typing import Callable, Sequence, Tuple
+
+import jax.numpy as jnp
+import jax.scipy.special as jspsp
+import jax.scipy.stats as jspst
+from jax import lax, nn, ops, random
+from jax import grad, jacobian, jit, value_and_grad, vmap
+from jax.experimental import optimizers, stax
+
+import prax.distributions as pd
+import prax.manifolds as pm
+from prax.bijectors import realnvp, permute
+
+
+parser = argparse.ArgumentParser(description='Density estimation for the orthogonal group')
+parser.add_argument('--num-realnvp', type=int, default=5, help='Number of RealNVP bijectors to employ')
+parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
+args = parser.parse_args()
+
+def uqr(A: jnp.ndarray) -> Tuple[jnp.ndarray]:
+    """This is the implementation of the unique QR decomposition as proposed in
+    [1], modified for JAX compatibility.
+
+    [1] https://github.com/numpy/numpy/issues/15628
+
+    Args:
+        A: Matrix for which to compute the unique QR decomposition.
+
+    Returns:
+        Q: Orthogonal matrix factor.
+        R: Upper triangular matrix with positive elements on the diagonal.
+
+    """
+    Q, R = jnp.linalg.qr(A)
+    signs = 2 * (jnp.diag(R) >= 0) - 1
+    Q = Q * signs[:, jnp.newaxis]
+    R = R * signs[..., jnp.newaxis]
+    return Q, R
+
+def haaron(rng: random.PRNGKey, num_samples: int, num_dims: int) -> jnp.ndarray:
+    """Draw samples from the uniform distribution on the O(n).
+
+    Args:
+        rng: Pseudo-random number generator seed.
+        num_samples: Number of uniform samples to generate.
+
+    Returns:
+        q: A matrix of uniformly distributed elements on O(n).
+
+    """
+    xo = random.normal(rng, [num_samples, num_dims, num_dims])
+    q, r = vmap(uqr)(xo)
+    return q
+
+def haaronlogpdf(xon: float) -> float:
+    """Computes the log-density of the uniform distribution on O(n). This is the
+    negative logarithm of the volume of O(n), which is twice the volume of
+    SO(n).
+
+    Args:
+        xon: The observations on O(n) at which to compute the uniform density.
+
+    Returns:
+        logpdf: The log-density of the uniform distribution on O(n).
+
+    """
+    num_dims = xon.shape[-1]
+    logvol = (
+        jnp.log(2.) + (num_dims-1) * jnp.log(2.) +
+        (num_dims - 1)*(num_dims + 2) / 4. * jnp.log(jnp.pi) -
+        jspsp.gammaln(jnp.arange(2, num_dims + 1) / 2).sum())
+    logpdf = -logvol
+    return logpdf * jnp.ones((len(xon), ))
+
+def ambient_network_factory(rng: jnp.ndarray, num_in: int, num_out: int, num_hidden: int) -> Tuple:
+    """Factory for producing neural networks and their parameterizations used in
+    the ambient flow.
+
+    Args:
+        rng: Pseudo-random number generator seed.
+        num_in: Number of inputs to the network.
+        num_out: Number of variables to transform by an affine transformation.
+            Each variable receives an associated shift and scale.
+        num_hidden: Number of hidden units in the hidden layer.
+
+    Returns:
+        out: A tuple containing the network parameters and a callable function
+            that returns the neural network output for the given input.
+
+    """
+    params_init, fn = stax.serial(
+        stax.Dense(num_hidden), stax.Relu,
+        stax.Dense(num_hidden), stax.Relu,
+        stax.FanOut(2),
+        stax.parallel(stax.Dense(num_out),
+                      stax.serial(stax.Dense(num_out), stax.Softplus)))
+    _, params = params_init(rng, (-1, num_in))
+    return params, fn
+
+def dequantization_network(rng: random.PRNGKey, num_in: int, num_hidden: int) -> Tuple:
+    """Factory for producing the dequantization neural network and its
+    parameterizations.
+
+    Args:
+        rng: Pseudo-random number generator seed.
+        num_in: Number of inputs to the network.
+        num_hidden: Number of hidden units in the hidden layer.
+
+    Returns:
+        out: A tuple containing the network parameters and a callable function
+            that returns the neural network output for the given input.
+
+    """
+    num_in_sq = num_in**2
+    num_in_choose_two = num_in * (num_in - 1) // 2
+    params_init, fn = stax.serial(
+        stax.Flatten,
+        stax.Dense(num_hidden), stax.Relu,
+        stax.Dense(num_hidden), stax.Relu,
+        stax.FanOut(4),
+        stax.parallel(stax.Dense(num_in),
+                      stax.Dense(num_in_choose_two),
+                      stax.serial(stax.Dense(num_in), stax.Softplus),
+                      stax.serial(stax.Dense(num_in_choose_two), stax.Softplus),
+        ))
+    _, params = params_init(rng, (-1, num_in_sq))
+    return params, fn
+
+def forward(params: Sequence[jnp.ndarray], fns: Sequence[Callable], x: jnp.ndarray) -> jnp.ndarray:
+    """Forward transformation of composining RealNVP bijectors and a permutation
+    bijector between them.
+
+    Args:
+        params: List of arrays parameterizing the RealNVP bijectors.
+        fns: List of functions that compute the shift and scale of the RealNVP
+            affine transformation.
+        x: Input to transform according to the composition of RealNVP
+            transformations and permutations.
+
+    Returns:
+        y: The transformed input.
+
+    """
+    num_dims = x.shape[-1]
+    num_masked = num_dims - num_dims // 2
+    perm = jnp.roll(jnp.arange(num_dims), 1)
+    y = x
+    for i in range(args.num_realnvp):
+        y = realnvp.forward(y, num_masked, params[i], fns[i])
+        y = permute.forward(y, perm)
+    return y
+
+def ambient_flow_log_prob(params: Sequence[jnp.ndarray], fns: Sequence[Callable], y: jnp.ndarray) -> jnp.ndarray:
+    """Compute the log-probability of ambient observations under the transformation
+    given by composing RealNVP bijectors and a permutation bijector between
+    them. Assumes that the base distribution is a standard multivariate normal.
+
+    Args:
+        params: List of arrays parameterizing the RealNVP bijectors.
+        fns: List of functions that compute the shift and scale of the RealNVP
+            affine transformation.
+        y: Observations whose likelihood under the composition of bijectors
+            should be computed.
+
+    Returns:
+        out: The log-probability of the observations given the parameters of the
+            bijection composition.
+
+    """
+    num_dims = y.shape[-1]**2
+    num_masked = num_dims - num_dims // 2
+    perm = jnp.roll(jnp.arange(num_dims), 1)
+    fldj = 0.
+    y = y.reshape((-1, num_dims))
+    for i in reversed(range(args.num_realnvp)):
+        y = permute.inverse(y, perm)
+        fldj += permute.forward_log_det_jacobian()
+        y = realnvp.inverse(y, num_masked, params[i], fns[i])
+        fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[i], fns[i])
+    logprob = jspst.multivariate_normal.logpdf(y, jnp.zeros((num_dims, )), 1.)
+    return logprob - fldj
+
+def sample_ambient(rng: jnp.ndarray, num_samples: int, bij_params:
+                   Sequence[jnp.ndarray], bij_fns: Sequence[Callable],
+                   num_dims: int) -> Tuple[jnp.ndarray]:
+    """Generate random samples from the ambient distribution and the projection of
+    those samples to O(n).
+
+    Args:
+        rng: Pseudo-random number generator seed.
+        num_samples: Number of samples to generate.
+        bij_params: List of arrays parameterizing the RealNVP bijectors.
+        bij_fns: List of functions that compute the shift and scale of the RealNVP
+            affine transformation.
+        num_dims: Dimensionality of samples.
+
+    Returns:
+        xamb, xsph: A tuple containing the ambient samples and the projection of
+            the samples to O(n).
+
+    """
+    xamb = random.normal(rng, [num_samples, num_dims, num_dims])
+    xamb = forward(bij_params, bij_fns, xamb.reshape((-1, num_dims**2)))
+    xamb = xamb.reshape((-1, num_dims, num_dims))
+    xon, _ = vmap(uqr)(xamb)
+    return xamb, xon
+
+@vmap
+def triu_factory(d, od):
+    """Parameterizes a n x n skew-symmetric matrix using a vector concatenation of
+    its upper-triangular entries.
+
+    """
+    n = d.size
+    B = jnp.zeros((n, n))
+    B = ops.index_update(B, jnp.triu_indices(n, 1), od)
+    return B + jnp.diag(d)
+
+def dequantize(rng: random.PRNGKey, deq_params: Sequence[jnp.ndarray], deq_fn: Callable, xon: jnp.ndarray, num_samples: int):
+    # Compute the dequantization into the ambient space.
+    deq = deq_fn(deq_params, xon)
+    (dmu, odmu), (dsigma, odsigma) = deq[:2], deq[2:]
+
+    # if True:
+    #     dmu = jnp.zeros_like(dmu)
+    #     odmu = jnp.zeros_like(odmu)
+    #     dsigma = jnp.ones_like(dsigma)
+    #     odsigma = jnp.ones_like(odsigma)
+
+    d = pd.lognormal.sample(rng, odmu, odsigma, [num_samples] + [len(xon), dmu.shape[-1]])
+    od = odmu + odsigma * random.normal(rng, [num_samples] + [len(xon), odmu.shape[-1]])
+    r = vmap(triu_factory)(d, od)
+    xdeq = jnp.matmul(xon, r)
+    # Compute the Jacobian determinant correction.
+    n = xon.shape[-1]
+    xflat = xdeq.reshape((num_samples, -1, n**2))
+    g = lambda a: jnp.hstack(uqr(a.reshape((n, n)))).ravel()
+    H = vmap(vmap(jacobian(g)))(xflat)
+    ldj = 0.5 * jnp.linalg.slogdet(jnp.swapaxes(H, -1, -2)@H)[1]
+    lpd = pd.lognormal.logpdf(d, dmu, dsigma).sum(axis=-1)
+    lpod = jspst.norm.logpdf(od, odmu, odsigma).sum(axis=-1)
+    lp = lpd + lpod - ldj
+    return xdeq, lp
+
+def negative_elbo(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, xsph: jnp.ndarray) -> jnp.ndarray:
+    """Compute the negative evidence lower bound of the dequantizing distribution.
+
+    Args:
+        rng: Pseudo-random number generator seed.
+        bij_params: List of arrays parameterizing the RealNVP bijectors.
+        bij_fns: List of functions that compute the shift and scale of the RealNVP
+            affine transformation.
+        deq_params: Parameters of the mean and scale functions used in
+            the log-normal dequantizer.
+        deq_fn: Function that computes the mean and scale of the dequantization
+            distribution.
+        xon: Observations on O(n).
+
+    Returns:
+        nelbo: The negative evidence lower bound.
+
+    """
+    xdeq, deq_log_dens = dequantize(rng, deq_params, deq_fn, xon, 1)
+    amb_log_dens = ambient_flow_log_prob(bij_params, bij_fns, xdeq)
+    elbo = jnp.mean(amb_log_dens - deq_log_dens, axis=0)
+    nelbo = -elbo
+    return nelbo
+
+@partial(jit, static_argnums=(2, 4))
+def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, xon: jnp.ndarray) -> float:
+    """Loss function composed of the evidence lower bound and score matching
+    loss.
+
+    Args:
+        rng: Pseudo-random number generator seed.
+        bij_params: List of arrays parameterizing the RealNVP bijectors.
+        bij_fns: List of functions that compute the shift and scale of the RealNVP
+            affine transformation.
+        deq_params: Parameters of the mean and scale functions used in
+            the log-normal dequantizer.
+        deq_fn: Function that computes the mean and scale of the dequantization
+            distribution.
+        xon: Observations on O(n).
+
+    Returns:
+        nelbo: The negative evidence lower bound.
+
+    """
+    rng, rng_rej, rng_elbo, rng_deq = random.split(rng, 4)
+    nelbo = negative_elbo(rng_elbo, bij_params, bij_fns, deq_params, deq_fn, xon).mean()
+    return nelbo
+
+
+rng = random.PRNGKey(args.seed)
+rng, rng_deq, rng_amb = random.split(rng, 3)
+rng, rng_haar = random.split(rng, 2)
+
+lr = 1e-3
+num_dims = 2
+
+# Generate parameters of the dequantization network.
+deq_params, deq_fn = dequantization_network(rng_deq, num_dims, 512)
+
+# Generate the parameters of RealNVP bijectors.
+bij_params, bij_fns = [], []
+num_dims_sq = num_dims**2
+num_masked = num_dims_sq - num_dims_sq // 2
+for i in range(args.num_realnvp):
+    p, f = ambient_network_factory(random.fold_in(rng_amb, i), num_masked, num_dims_sq // 2, 512)
+    bij_params.append(p)
+    bij_fns.append(f)
+
+xon = haaron(rng_haar, 20000, num_dims)
+target = lambda xon: -0.5 * jnp.square(xon - jnp.eye(num_dims)).sum(axis=(-1, -2)) / 10.
+lprop = haaronlogpdf(xon)
+lm = -lprop[0]
+la = target(xon) - lprop - lm
+logu = jnp.log(random.uniform(rng_haar, [len(xon)]))
+xon = xon[logu < la]
+
+opt_init, opt_update, get_params = optimizers.adam(lr)
+opt_state = opt_init((bij_params, deq_params))
+for it in range(1000):
+    rng_step = random.fold_in(rng, it)
+    bij_params, deq_params = get_params(opt_state)
+    loss_val, loss_grad = value_and_grad(loss, (1, 3))(rng_step, bij_params, bij_fns, deq_params, deq_fn, xon)
+    opt_state = opt_update(it, loss_grad, opt_state)
+    print('iteration: {} - nelbo: {:.4f}'.format(it + 1, loss_val))
+
+loss_val, loss_grad = value_and_grad(loss, (1, 3))(rng, bij_params, bij_fns, deq_params, deq_fn, xon)
+
+
+# The following code can check if the log-probability in the ambient space
+# seems correct.
+
+# xamb, _ = sample_ambient(rng, 5000000, bij_params, bij_fns, num_dims)
+# lp = ambient_flow_log_prob(bij_params, bij_fns, xamb)
+# prob = jnp.exp(lp)
+# xamb = xamb.reshape((-1, num_dims_sq))
+# delta = 0.2
+# for i in range(50):
+#     p = xamb[i]
+#     pr = prob[i] * delta**4
+#     idx0 = jnp.abs(xamb[:, 0] - p[0]) < delta / 2.
+#     idx1 = jnp.abs(xamb[:, 1] - p[1]) < delta / 2.
+#     idx2 = jnp.abs(xamb[:, 2] - p[2]) < delta / 2.
+#     idx3 = jnp.abs(xamb[:, 3] - p[3]) < delta / 2.
+#     pr_est = jnp.mean(idx0 & idx1 & idx2 & idx3)
+#     print('prob.: {:.10f} - estim. prob.: {:.10f}'.format(pr, pr_est))
+
