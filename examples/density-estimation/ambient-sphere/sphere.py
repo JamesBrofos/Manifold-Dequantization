@@ -165,25 +165,9 @@ def forward(params: Sequence[jnp.ndarray], fns: Sequence[Callable], x:
     num_masked = num_dims - 2
     perm = jnp.roll(jnp.arange(num_dims), 1)
     y = x
-    # for i in range(args.num_realnvp):
-    #     y = realnvp.forward(y, num_masked, params[i], fns[i])
-    #     if i < (args.num_realnvp - 1):
-    #         y = permute.forward(y, perm)
-
     for i in range(args.num_realnvp):
         y = realnvp.forward(y, num_masked, params[i], fns[i])
         y = permute.forward(y, perm)
-
-
-    # y = realnvp.forward(x, num_masked, params[0], fns[0])
-    # y = permute.forward(y, perm)
-    # y = realnvp.forward(y, num_masked, params[1], fns[1])
-    # y = permute.forward(y, perm)
-    # y = realnvp.forward(y, num_masked, params[2], fns[2])
-    # y = permute.forward(y, perm)
-    # y = realnvp.forward(y, num_masked, params[3], fns[3])
-    # y = permute.forward(y, perm)
-    # y = realnvp.forward(y, num_masked, params[4], fns[4])
     return y
 
 def ambient_flow_log_prob(params: Sequence[jnp.ndarray], fns:
@@ -208,32 +192,11 @@ def ambient_flow_log_prob(params: Sequence[jnp.ndarray], fns:
     num_masked = num_dims - 2
     perm = jnp.roll(jnp.arange(num_dims), 1)
     fldj = 0.
-
     for i in reversed(range(args.num_realnvp)):
         y = permute.inverse(y, perm)
         fldj += permute.forward_log_det_jacobian()
         y = realnvp.inverse(y, num_masked, params[i], fns[i])
         fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[i], fns[i])
-
-    # y = realnvp.inverse(y, num_masked, params[4], fns[4])
-    # fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[4], fns[4])
-    # y = permute.inverse(y, perm)
-    # fldj += permute.forward_log_det_jacobian()
-    # y = realnvp.inverse(y, num_masked, params[3], fns[3])
-    # fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[3], fns[3])
-    # y = permute.inverse(y, perm)
-    # fldj += permute.forward_log_det_jacobian()
-    # y = realnvp.inverse(y, num_masked, params[2], fns[2])
-    # fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[2], fns[2])
-    # y = permute.inverse(y, perm)
-    # fldj += permute.forward_log_det_jacobian()
-    # y = realnvp.inverse(y, num_masked, params[1], fns[1])
-    # fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[1], fns[1])
-    # y = permute.inverse(y, perm)
-    # fldj += permute.forward_log_det_jacobian()
-    # y = realnvp.inverse(y, num_masked, params[0], fns[0])
-    # fldj += realnvp.forward_log_det_jacobian(y, num_masked, params[0], fns[0])
-
     logprob = jspst.multivariate_normal.logpdf(y, jnp.zeros((num_dims, )), 1.)
     return logprob - fldj
 

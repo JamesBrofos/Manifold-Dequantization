@@ -1,6 +1,10 @@
 import argparse
+import os
 from functools import partial
 from typing import Callable, Sequence, Tuple
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 import jax.numpy as jnp
 import jax.scipy.special as jspsp
@@ -9,9 +13,6 @@ from jax import lax, nn, ops, random, tree_util
 from jax import grad, jacobian, jit, value_and_grad, vmap
 from jax.experimental import optimizers, stax
 
-from jax.config import config
-config.update("jax_enable_x64", True)
-
 import prax.distributions as pd
 import prax.manifolds as pm
 from prax.bijectors import realnvp, permute
@@ -19,6 +20,7 @@ from prax.bijectors import realnvp, permute
 import ambient
 import dequantization
 import haaron
+from distributions import log_unimodal, log_multimodal
 from polar import polar, transp, vecpolar
 
 
@@ -28,9 +30,17 @@ parser.add_argument('--num-dims', type=int, default=3, help='Dimensionality of o
 parser.add_argument('--num-batch', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--num-realnvp', type=int, default=5, help='Number of RealNVP bijectors to employ')
 parser.add_argument('--num-steps', type=int, default=100, help='Number of gradient descent iterations')
+parser.add_argument('--density', type=str, default='unimodal', help='Which density on O(n) to sample')
+parser.add_argument('--num-ambient', type=int, default=128, help='Number of hidden units in the ambient network')
+parser.add_argument('--num-dequantization', type=int, default=64, help='Number of hidden units in dequantization network')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
+
+log_dens = {
+    'unimodal': log_unimodal,
+    'multimodal': log_multimodal
+}[args.density]
 
 def l2_squared(pytree):
     """Squared L2-norm penalization term."""
@@ -60,7 +70,6 @@ def negative_elbo(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: 
     elbo = jnp.mean(amb_log_dens - deq_log_dens, axis=0)
     nelbo = -elbo
     return nelbo
-    # return -amb_log_dens
 
 def clip_and_zero_nans(g: jnp.ndarray) -> jnp.ndarray:
     """Clip the input to within a certain range and remove the NaNs in a matrix by
@@ -80,7 +89,6 @@ def clip_and_zero_nans(g: jnp.ndarray) -> jnp.ndarray:
     g = jnp.clip(g, -1., 1.)
     return g
 
-@partial(jit, static_argnums=(2, 4))
 def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, xon: jnp.ndarray) -> float:
     """Loss function composed of the evidence lower bound and score matching
     loss.
@@ -105,15 +113,30 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
     nelbo = nelbo.mean()
     return nelbo
 
+@partial(jit, static_argnums=(2, 4, 5, 6))
+def train(rng: random.PRNGKey, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_steps: int, lr: float) -> Tuple:
+    opt_init, opt_update, get_params = optimizers.adam(lr)
+    def step(opt_state, it):
+        rng_step = random.fold_in(rng, it)
+        bij_params, deq_params = get_params(opt_state)
+        loss_val, loss_grad = value_and_grad(loss, (1, 3))(rng_step, bij_params, bij_fns, deq_params, deq_fn, xobs)
+        loss_grad = tree_util.tree_map(clip_and_zero_nans, loss_grad)
+        opt_state = opt_update(it, loss_grad, opt_state)
+        return opt_state, loss_val
+    opt_state = opt_init((bij_params, deq_params))
+    opt_state, trace = lax.scan(step, opt_state, jnp.arange(num_steps))
+    bij_params, deq_params = get_params(opt_state)
+    return (bij_params, deq_params), trace
 
 # Set pseudo-random number generator keys.
 rng = random.PRNGKey(args.seed)
 rng, rng_deq, rng_bij = random.split(rng, 3)
 rng, rng_haar, rng_amb = random.split(rng, 3)
 rng, rng_mse = random.split(rng, 2)
+rng, rng_train = random.split(rng, 2)
 
 # Generate parameters of the dequantization network.
-deq_params, deq_fn = dequantization.network(rng_deq, args.num_dims, 64)
+deq_params, deq_fn = dequantization.network(rng_deq, args.num_dims, args.num_dequantization)
 
 # Generate the parameters of RealNVP bijectors.
 bij_params, bij_fns = [], []
@@ -121,34 +144,61 @@ num_dims_sq = args.num_dims**2
 half_num_dims_sq = num_dims_sq // 2
 num_masked = num_dims_sq - half_num_dims_sq
 for i in range(args.num_realnvp):
-    p, f = ambient.network_factory(random.fold_in(rng_bij, i), num_masked, half_num_dims_sq, 128)
+    p, f = ambient.network_factory(random.fold_in(rng_bij, i), num_masked, half_num_dims_sq, args.num_ambient)
     bij_params.append(p)
     bij_fns.append(f)
 
 # Sample from a target distribution using rejection sampling
-xhaar = haaron.sample(rng_haar, 200000, args.num_dims)
-target = lambda x: -0.5 * jnp.square(x - jnp.eye(args.num_dims)).sum(axis=(-1, -2)) / 3.
+xhaar = haaron.sample(rng_haar, 5000000, args.num_dims)
 lprop = haaron.logpdf(xhaar)
-lm = -lprop[0]
-la = target(xhaar) - lprop - lm
+ld = log_dens(xhaar)
+lm = -lprop[0] - ld.max() + 0.5
+la = ld - lprop - lm
 logu = jnp.log(random.uniform(rng_haar, [len(xhaar)]))
 xobs = xhaar[logu < la]
 print('number of rejection samples: {}'.format(len(xobs)))
+assert jnp.all(la < 0.)
 
-opt_init, opt_update, get_params = optimizers.adam(args.lr)
-opt_state = opt_init((bij_params, deq_params))
+# Train dequantization networks.
+(bij_params, deq_params), trace = train(rng_train, bij_params, bij_fns, deq_params, deq_fn, args.num_steps, args.lr)
 
-for it in range(args.num_steps):
-    rng_step = random.fold_in(rng, it)
-    bij_params, deq_params = get_params(opt_state)
-    loss_val, loss_grad = value_and_grad(loss, (1, 3))(rng_step, bij_params, bij_fns, deq_params, deq_fn, xobs)
-    loss_grad = tree_util.tree_map(clip_and_zero_nans, loss_grad)
-    opt_state = opt_update(it, loss_grad, opt_state)
-    print('iteration: {} - nelbo: {:.4f}'.format(it + 1, loss_val))
+num_is = 100
+_, xon = ambient.sample(rng_mse, 10000, bij_params, bij_fns, args.num_dims)
+xdeq, deq_log_dens = dequantization.dequantize(rng, deq_params, deq_fn, xon, num_is)
+amb_log_dens = vmap(ambient.log_prob, in_axes=(None, None, 0))(bij_params, bij_fns, xdeq)
+log_approx = jspsp.logsumexp(amb_log_dens - deq_log_dens, axis=0) - jnp.log(num_is)
+log_target = log_dens(xon)
+approx, target = jnp.exp(log_approx), jnp.exp(log_target)
+w = target / approx
+Z = jnp.nanmean(w)
+kl = jnp.nanmean(log_approx - log_target) + jnp.log(Z)
+ess = jnp.square(jnp.nansum(w)) / jnp.nansum(jnp.square(w))
+ress = 100 * ess / len(w)
+print('estimate KL(q||p): {:.5f} - relative effective sample size: {:.2f}%'.format(kl, ress))
 
-    if (it + 1) % 100 == 0 or (it + 1) == 1:
-        _, xon = ambient.sample(rng_mse, 1000000, bij_params, bij_fns, args.num_dims)
-        mean_mse = jnp.square(jnp.linalg.norm(xon.mean(0) - xobs.mean(0)))
-        cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xon.reshape((-1, num_dims_sq)).T) - jnp.cov(xobs.reshape((-1, num_dims_sq)).T)))
-        print('mean mse: {:.5f} - covariance mse: {:.5f}'.format(mean_mse, cov_mse))
+_, xon = ambient.sample(rng_mse, 1000000, bij_params, bij_fns, args.num_dims)
+mean_mse = jnp.square(jnp.linalg.norm(xon.mean(0) - xobs.mean(0)))
+cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xon.reshape((-1, num_dims_sq)).T) - jnp.cov(xobs.reshape((-1, num_dims_sq)).T)))
+print('mean mse: {:.5f} - covariance mse: {:.5f}'.format(mean_mse, cov_mse))
 
+
+# Visualize the action of the rejection and dequantization samples on a vector.
+vec = jnp.ones((args.num_dims, ))
+xonvec = xon@vec
+xobsvec = xobs@vec
+num_obs = 2000
+
+fig = plt.figure(figsize=(10, 4))
+ax = fig.add_subplot(121)
+ax.plot(trace, '-')
+ax.set_ylabel('ELBO Loss')
+ax.grid(linestyle=':')
+ax = fig.add_subplot(122, projection='3d')
+ax.plot(xobsvec[:num_obs, 0], xobsvec[:num_obs, 1], xobsvec[:num_obs, 2], '.', alpha=0.1, label='Rejection Samples')
+ax.plot(xonvec[:num_obs, 0], xonvec[:num_obs, 1], xonvec[:num_obs, 2], '.', alpha=0.1, label='Dequantization Samples')
+ax.grid(linestyle=':')
+ax.legend()
+plt.tight_layout()
+plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
+plt.subplots_adjust(top=0.85)
+plt.savefig(os.path.join('images', 'orthogonal-{}.png'.format(args.density)))

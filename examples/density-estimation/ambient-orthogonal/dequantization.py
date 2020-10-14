@@ -77,7 +77,7 @@ def dequantize(rng: random.PRNGKey, deq_params: Sequence[jnp.ndarray], deq_fn: C
     div = 10.
     dmu, odmu, dsigma, odsigma = dmu / div, odmu / div, dsigma / div, odsigma / div
     rng, rng_d, rng_od = random.split(rng, 3)
-    d = pd.lognormal.sample(rng_d, odmu, odsigma, [num_samples] + [len(xon), dmu.shape[-1]])
+    d = pd.lognormal.sample(rng_d, dmu, dsigma, [num_samples] + [len(xon), dmu.shape[-1]])
     od = odmu + odsigma * random.normal(rng_od, [num_samples] + [len(xon), odmu.shape[-1]])
     L = vmap(tril_factory)(d, od)
     R = L@transp(L)
