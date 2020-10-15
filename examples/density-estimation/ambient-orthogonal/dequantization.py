@@ -64,16 +64,30 @@ def dequantize(rng: random.PRNGKey, deq_params: Sequence[jnp.ndarray], deq_fn: C
     of a matrix in O(n) and a Cholesky factor. This code places a distribution
     over the cholesky factor.
 
+    Args:
+        rng: Pseudo-random number generator seed.
+        deq_params: Parameters of the mean and scale functions used in
+            the log-normal dequantizer.
+        deq_fn: Function that computes the mean and scale of the dequantization
+            distribution.
+        xon: Observations on O(n).
+        num_samples: Number of deqauntization samples to generate.
+
+    Returns:
+        xdeq: Dequantized samples.
+        lp: The log-density of the dequantization density with a Jacobian
+            correction for the ambient space.
+
     """
     # Compute the dequantization into the ambient space.
     deq = deq_fn(deq_params, xon)
     (dmu, odmu), (dsigma, odsigma) = deq[:2], deq[2:]
-    mulim = 2.5
-    sigmamax = 3.
-    dmu = jnp.clip(dmu, -mulim, mulim)
-    odmu = jnp.clip(odmu, -mulim, mulim)
-    dsigma = jnp.clip(dsigma, 0.1, sigmamax)
-    odsigma = jnp.clip(odsigma, 0.1, sigmamax)
+    # mulim = 2.5
+    # sigmamax = 3.
+    # dmu = jnp.clip(dmu, -mulim, mulim)
+    # odmu = jnp.clip(odmu, -mulim, mulim)
+    # dsigma = jnp.clip(dsigma, 0.1, sigmamax)
+    # odsigma = jnp.clip(odsigma, 0.1, sigmamax)
     div = 10.
     dmu, odmu, dsigma, odsigma = dmu / div, odmu / div, dsigma / div, odsigma / div
     rng, rng_d, rng_od = random.split(rng, 3)
