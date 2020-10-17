@@ -203,8 +203,8 @@ target = data@O.T
 fig = plt.figure(figsize=(10, 4))
 ax = fig.add_subplot(121, projection='3d')
 ax.set_title('Procrustes Posterior')
-for i in range(100):
-    ax.plot(pro[i, :, 0], pro[i, :, 1], pro[i, :, 2], '.', color='tab:blue', label='Samples' if i == 0 else '_')
+for i in range(1000):
+    ax.plot(pro[i, :, 0], pro[i, :, 1], pro[i, :, 2], '.', alpha=0.05, color='tab:blue', label='Samples' if i == 0 else '_')
 
 ax.plot(target[:, 0], target[:, 1], target[:, 2], '.', label='Target', color='tab:orange')
 ax.legend()
@@ -218,4 +218,6 @@ ax.plot(trace)
 ax.grid(linestyle=':')
 ax.set_title('ELBO Loss')
 ax.set_xlabel('Number of Iterations')
+plt.suptitle('KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(kl, ress))
+plt.subplots_adjust(top=0.85)
 plt.savefig(os.path.join('images', 'procrustes.png'))
