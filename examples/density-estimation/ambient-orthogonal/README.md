@@ -27,4 +27,5 @@ Here are the invocations to reproduce these experiments.
 ```
 singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 500 --density unimodal
 singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 500 --density multimodal --num-ambient 512 --num-dequantization 128
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py
 ```
