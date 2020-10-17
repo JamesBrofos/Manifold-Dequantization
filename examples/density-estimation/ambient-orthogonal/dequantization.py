@@ -82,12 +82,6 @@ def dequantize(rng: random.PRNGKey, deq_params: Sequence[jnp.ndarray], deq_fn: C
     # Compute the dequantization into the ambient space.
     deq = deq_fn(deq_params, xon)
     (dmu, odmu), (dsigma, odsigma) = deq[:2], deq[2:]
-    # mulim = 2.5
-    # sigmamax = 3.
-    # dmu = jnp.clip(dmu, -mulim, mulim)
-    # odmu = jnp.clip(odmu, -mulim, mulim)
-    # dsigma = jnp.clip(dsigma, 0.1, sigmamax)
-    # odsigma = jnp.clip(odsigma, 0.1, sigmamax)
     div = 10.
     dmu, odmu, dsigma, odsigma = dmu / div, odmu / div, dsigma / div, odsigma / div
     rng, rng_d, rng_od = random.split(rng, 3)

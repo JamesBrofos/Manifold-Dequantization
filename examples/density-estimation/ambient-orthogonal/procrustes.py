@@ -25,27 +25,15 @@ from polar import polar, transp, vecpolar
 
 
 parser = argparse.ArgumentParser(description='Density estimation for the orthogonal group')
-parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
-parser.add_argument('--num-dims', type=int, default=3, help='Dimensionality of orthogonal group')
+parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
 parser.add_argument('--num-batch', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--num-realnvp', type=int, default=5, help='Number of RealNVP bijectors to employ')
-parser.add_argument('--num-steps', type=int, default=100, help='Number of gradient descent iterations')
-parser.add_argument('--density', type=str, default='unimodal', help='Which density on O(n) to sample')
-parser.add_argument('--num-ambient', type=int, default=128, help='Number of hidden units in the ambient network')
-parser.add_argument('--num-dequantization', type=int, default=64, help='Number of hidden units in dequantization network')
+parser.add_argument('--num-steps', type=int, default=3000, help='Number of gradient descent iterations')
+parser.add_argument('--num-ambient', type=int, default=512, help='Number of hidden units in the ambient network')
+parser.add_argument('--num-dequantization', type=int, default=128, help='Number of hidden units in dequantization network')
+parser.add_argument('--noise-scale', type=float, default=1., help='Additive noise scale')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
-
-
-log_dens = {
-    'unimodal': log_unimodal,
-    'multimodal': log_multimodal
-}[args.density]
-
-def l2_squared(pytree):
-    """Squared L2-norm penalization term."""
-    leaves, _ = tree_util.tree_flatten(pytree)
-    return sum(jnp.vdot(x, x) for x in leaves)
 
 def negative_elbo(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, xon: jnp.ndarray) -> jnp.ndarray:
     """Compute the negative evidence lower bound of the dequantizing distribution.
@@ -128,19 +116,59 @@ def train(rng: random.PRNGKey, bij_params: Sequence[jnp.ndarray], bij_fns: Seque
     bij_params, deq_params = get_params(opt_state)
     return (bij_params, deq_params), trace
 
-# Set pseudo-random number generator keys.
+def log_density_factory(data, target, scale):
+    """Factory function for building a log-likelihood for the Procrustes problem
+    given initial data and target points, and a (assumed known) noise scale.
+
+    Args:
+        data: Data on which to apply an orthogonal matrix so as to best match the
+            target observations.
+        target: Array of points to approximate.
+        scale: Noise variance of the estimation problem.
+
+    Returns:
+        log_density: A function to compute the log-density given an orthogonal
+            matrix input.
+
+    """
+    def log_density(xon):
+        p = data@transp(xon)
+        ll = -0.5 * jnp.square(target - p).sum(axis=(-1, -2)) / jnp.square(scale)
+        return ll
+    return log_density
+
 rng = random.PRNGKey(args.seed)
+rng, rng_data, rng_ortho, rng_noise = random.split(rng, 4)
+rng, rng_haar = random.split(rng, 2)
 rng, rng_deq, rng_bij = random.split(rng, 3)
-rng, rng_haar, rng_amb = random.split(rng, 3)
-rng, rng_mse, rng_kl = random.split(rng, 3)
 rng, rng_train = random.split(rng, 2)
+rng, rng_amb, rng_mse, rng_kl = random.split(rng, 4)
+
+num_dims = 3
+data = random.normal(rng_data, [10, num_dims])
+O = haaron.sample(rng_ortho, 1, num_dims)[0]
+noise = args.noise_scale * random.normal(rng_noise, data.shape)
+target = data@O.T + noise
+log_density = log_density_factory(data, target, args.noise_scale)
+U, _, VT = jnp.linalg.svd(data.T@target)
+Oml = (U@VT).T
+
+xhaar = haaron.sample(rng_haar, 10000000, num_dims)
+lprop = haaron.logpdf(xhaar)
+ld = log_density(xhaar)
+lm = -lprop[0] + log_density(Oml)
+la = ld - lprop - lm
+logu = jnp.log(random.uniform(rng_haar, [len(xhaar)]))
+xobs = xhaar[logu < la]
+print('number of rejection samples: {}'.format(len(xobs)))
+assert jnp.all(la < 0.)
 
 # Generate parameters of the dequantization network.
-deq_params, deq_fn = dequantization.network(rng_deq, args.num_dims, args.num_dequantization)
+deq_params, deq_fn = dequantization.network(rng_deq, num_dims, args.num_dequantization)
 
 # Generate the parameters of RealNVP bijectors.
 bij_params, bij_fns = [], []
-num_dims_sq = args.num_dims**2
+num_dims_sq = num_dims**2
 half_num_dims_sq = num_dims_sq // 2
 num_masked = num_dims_sq - half_num_dims_sq
 for i in range(args.num_realnvp):
@@ -148,57 +176,46 @@ for i in range(args.num_realnvp):
     bij_params.append(p)
     bij_fns.append(f)
 
-# Sample from a target distribution using rejection sampling
-xhaar = haaron.sample(rng_haar, 5000000, args.num_dims)
-lprop = haaron.logpdf(xhaar)
-ld = log_dens(xhaar)
-lm = -lprop[0] - ld.max() + 0.5
-la = ld - lprop - lm
-logu = jnp.log(random.uniform(rng_haar, [len(xhaar)]))
-xobs = xhaar[logu < la]
-print('number of rejection samples: {}'.format(len(xobs)))
-assert jnp.all(la < 0.)
-
 # Train dequantization networks.
 (bij_params, deq_params), trace = train(rng_train, bij_params, bij_fns, deq_params, deq_fn, args.num_steps, args.lr)
 
-num_is = 100
-_, xon = ambient.sample(rng_mse, 10000, bij_params, bij_fns, args.num_dims)
+# Compute an estimate of the KL divergence.
+num_is = 150
+_, xon = ambient.sample(rng_mse, 10000, bij_params, bij_fns, num_dims)
 xdeq, deq_log_dens = dequantization.dequantize(rng_kl, deq_params, deq_fn, xon, num_is)
 amb_log_dens = vmap(ambient.log_prob, in_axes=(None, None, 0))(bij_params, bij_fns, xdeq)
 log_approx = jspsp.logsumexp(amb_log_dens - deq_log_dens, axis=0) - jnp.log(num_is)
-log_target = log_dens(xon)
+log_approx = jnp.clip(log_approx, -10., 10.)
+log_target = log_density(xon)
 approx, target = jnp.exp(log_approx), jnp.exp(log_target)
-w = target / approx
+w = jnp.exp(log_target - log_approx)
 Z = jnp.nanmean(w)
-kl = jnp.nanmean(log_approx - log_target) + jnp.log(Z)
+logZ = jspsp.logsumexp(log_target - log_approx) - jnp.log(len(xon))
+kl = jnp.nanmean(log_approx - log_target) + logZ
 ess = jnp.square(jnp.nansum(w)) / jnp.nansum(jnp.square(w))
 ress = 100 * ess / len(w)
 print('estimate KL(q||p): {:.5f} - relative effective sample size: {:.2f}%'.format(kl, ress))
 
-_, xon = ambient.sample(rng_mse, 1000000, bij_params, bij_fns, args.num_dims)
-mean_mse = jnp.square(jnp.linalg.norm(xon.mean(0) - xobs.mean(0)))
-cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xon.reshape((-1, num_dims_sq)).T) - jnp.cov(xobs.reshape((-1, num_dims_sq)).T)))
-print('mean mse: {:.5f} - covariance mse: {:.5f}'.format(mean_mse, cov_mse))
-
-
-# Visualize the action of the rejection and dequantization samples on a vector.
-vec = jnp.ones((args.num_dims, ))
-xonvec = xon@vec
-xobsvec = xobs@vec
-num_obs = 2000
+# Construct visualization of the Procrustes problem.
+pro = data@transp(xon)
+target = data@O.T
 
 fig = plt.figure(figsize=(10, 4))
-ax = fig.add_subplot(121)
-ax.plot(trace, '-')
-ax.set_ylabel('ELBO Loss')
-ax.grid(linestyle=':')
-ax = fig.add_subplot(122, projection='3d')
-ax.plot(xobsvec[:num_obs, 0], xobsvec[:num_obs, 1], xobsvec[:num_obs, 2], '.', alpha=0.1, label='Rejection Samples')
-ax.plot(xonvec[:num_obs, 0], xonvec[:num_obs, 1], xonvec[:num_obs, 2], '.', alpha=0.1, label='Dequantization Samples')
-ax.grid(linestyle=':')
+ax = fig.add_subplot(121, projection='3d')
+ax.set_title('Procrustes Posterior')
+for i in range(100):
+    ax.plot(pro[i, :, 0], pro[i, :, 1], pro[i, :, 2], '.', color='tab:blue')
+
+ax.plot(target[:, 0], target[:, 1], target[:, 2], '.', label='Target', color='tab:orange')
 ax.legend()
-plt.tight_layout()
-plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
-plt.subplots_adjust(top=0.85)
-plt.savefig(os.path.join('images', 'orthogonal-{}.png'.format(args.density)))
+ax.grid(linestyle=':')
+lim = 4.
+ax.set_xlim((-lim, lim))
+ax.set_ylim((-lim, lim))
+ax.set_zlim((-lim, lim))
+ax = fig.add_subplot(122)
+ax.plot(trace)
+ax.grid(linestyle=':')
+ax.set_title('ELBO Loss')
+ax.set_xlabel('Number of Iterations')
+plt.savefig(os.path.join('images', 'procrustes.png'))
