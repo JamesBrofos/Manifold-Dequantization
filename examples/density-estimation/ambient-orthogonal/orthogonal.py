@@ -19,7 +19,6 @@ from prax.bijectors import realnvp, permute
 
 import ambient
 import dequantization
-import haaron
 from distributions import log_unimodal, log_multimodal
 from polar import polar, transp, vecpolar
 
@@ -149,8 +148,8 @@ for i in range(args.num_realnvp):
     bij_fns.append(f)
 
 # Sample from a target distribution using rejection sampling
-xhaar = haaron.sample(rng_haar, 5000000, args.num_dims)
-lprop = haaron.logpdf(xhaar)
+xhaar = pd.orthogonal.sample(rng_haar, 5000000, args.num_dims)
+lprop = pd.orthogonal.logpdf(xhaar)
 ld = log_dens(xhaar)
 lm = -lprop[0] - ld.max() + 0.5
 la = ld - lprop - lm
@@ -167,6 +166,7 @@ _, xon = ambient.sample(rng_mse, 10000, bij_params, bij_fns, args.num_dims)
 xdeq, deq_log_dens = dequantization.dequantize(rng_kl, deq_params, deq_fn, xon, num_is)
 amb_log_dens = vmap(ambient.log_prob, in_axes=(None, None, 0))(bij_params, bij_fns, xdeq)
 log_approx = jspsp.logsumexp(amb_log_dens - deq_log_dens, axis=0) - jnp.log(num_is)
+log_approx = jnp.clip(log_approx, -10., 10.)
 log_target = log_dens(xon)
 approx, target = jnp.exp(log_approx), jnp.exp(log_target)
 w = target / approx

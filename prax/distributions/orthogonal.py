@@ -41,7 +41,7 @@ def sample(rng: random.PRNGKey, num_samples: int, num_dims: int) -> jnp.ndarray:
     q, r = vmap(uqr)(xo)
     return q
 
-def logpdf(xon: float) -> float:
+def logpdf(xon: jnp.ndarray) -> float:
     """Computes the log-density of the uniform distribution on O(n). This is the
     negative logarithm of the volume of O(n), which is twice the volume of
     SO(n).
@@ -59,4 +59,4 @@ def logpdf(xon: float) -> float:
         (num_dims - 1)*(num_dims + 2) / 4. * jnp.log(jnp.pi) -
         jspsp.gammaln(jnp.arange(2, num_dims + 1) / 2).sum())
     logpdf = -logvol
-    return logpdf * jnp.ones((len(xon), ))
+    return logpdf * jnp.ones(xon.shape[:-2])

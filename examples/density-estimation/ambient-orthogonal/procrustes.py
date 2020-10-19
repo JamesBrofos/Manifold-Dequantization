@@ -19,7 +19,6 @@ from prax.bijectors import realnvp, permute
 
 import ambient
 import dequantization
-import haaron
 from distributions import log_unimodal, log_multimodal
 from polar import polar, transp, vecpolar
 
@@ -146,15 +145,15 @@ rng, rng_amb, rng_mse, rng_kl = random.split(rng, 4)
 
 num_dims = 3
 data = random.normal(rng_data, [10, num_dims])
-O = haaron.sample(rng_ortho, 1, num_dims)[0]
+O = pd.orthogonal.sample(rng_ortho, 1, num_dims)[0]
 noise = args.noise_scale * random.normal(rng_noise, data.shape)
 target = data@O.T + noise
 log_density = log_density_factory(data, target, args.noise_scale)
 U, _, VT = jnp.linalg.svd(data.T@target)
 Oml = (U@VT).T
 
-xhaar = haaron.sample(rng_haar, 10000000, num_dims)
-lprop = haaron.logpdf(xhaar)
+xhaar = pd.orthogonal.sample(rng_haar, 10000000, num_dims)
+lprop = pd.orthogonal.logpdf(xhaar)
 ld = log_density(xhaar)
 lm = -lprop[0] + log_density(Oml)
 la = ld - lprop - lm

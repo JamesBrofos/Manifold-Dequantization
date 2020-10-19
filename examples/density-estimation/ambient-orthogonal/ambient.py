@@ -106,7 +106,7 @@ def sample(rng: jnp.ndarray, num_samples: int, bij_params: Sequence[jnp.ndarray]
         num_dims: Dimensionality of samples.
 
     Returns:
-        xamb, xsph: A tuple containing the ambient samples and the projection of
+        xamb, xon: A tuple containing the ambient samples and the projection of
             the samples to O(n).
 
     """
