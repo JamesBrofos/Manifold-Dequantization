@@ -14,10 +14,17 @@ def log_multimodal(x):
     matrix and the pure reflection.
 
     """
+    # num_dims = x.shape[-1]
+    # Id = jnp.eye(num_dims)
+    # scale = 0.5
+    # lp = 0.
+    # lp += jnp.exp(-0.5 * jnp.square(x - Id).sum((-1, -2)) / jnp.square(scale))
+    # lp += jnp.exp(-0.5 * jnp.square(x + Id).sum((-1, -2)) / jnp.square(scale))
+    # return jnp.log(lp)
     num_dims = x.shape[-1]
-    Id = jnp.eye(num_dims)
     scale = 0.5
-    lp = 0.
-    lp += jnp.exp(-0.5 * jnp.square(x - Id).sum((-1, -2)) / jnp.square(scale))
-    lp += jnp.exp(-0.5 * jnp.square(x + Id).sum((-1, -2)) / jnp.square(scale))
-    return jnp.log(lp)
+    Id = jnp.eye(num_dims)
+    det = jnp.linalg.det(x)
+    x *= det[..., jnp.newaxis, jnp.newaxis]
+    lp = -0.5 * jnp.square(x - Id).sum((-1, -2)) / jnp.square(scale)
+    return lp

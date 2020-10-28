@@ -197,8 +197,36 @@ ax = fig.add_subplot(122, projection='3d')
 ax.plot(xobsvec[:num_obs, 0], xobsvec[:num_obs, 1], xobsvec[:num_obs, 2], '.', alpha=0.1, label='Rejection Samples')
 ax.plot(xonvec[:num_obs, 0], xonvec[:num_obs, 1], xonvec[:num_obs, 2], '.', alpha=0.1, label='Dequantization Samples')
 ax.grid(linestyle=':')
-ax.legend()
+leg = ax.legend()
+for lh in leg.legendHandles:
+    lh._legmarker.set_alpha(1)
+
 plt.tight_layout()
 plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
 plt.subplots_adjust(top=0.85)
 plt.savefig(os.path.join('images', 'orthogonal-{}.png'.format(args.density)))
+
+
+
+rng, rng_sample, rng_lp = random.split(rng, 3)
+num_is = 100
+_, xon = ambient.sample(rng_sample, 10000, bij_params, bij_fns, args.num_dims)
+xso = xon * jnp.linalg.det(xon)[..., jnp.newaxis, jnp.newaxis]
+approx = 0.
+
+for s in [-1, +1]:
+    xdeq, deq_log_dens = dequantization.dequantize(random.fold_in(rng_lp, s), deq_params, deq_fn, s*xso, num_is)
+    amb_log_dens = vmap(ambient.log_prob, in_axes=(None, None, 0))(bij_params, bij_fns, xdeq)
+    log_approx = jspsp.logsumexp(amb_log_dens - deq_log_dens, axis=0) - jnp.log(num_is)
+    log_approx = jnp.clip(log_approx, -10., 10.)
+    approx += jnp.exp(log_approx)
+
+log_approx = jnp.log(approx)
+log_target = log_dens(xso) + jnp.log(2.)
+target = jnp.exp(log_target)
+w = target / approx
+Z = jnp.nanmean(w)
+kl = jnp.nanmean(log_approx - log_target) + jnp.log(Z)
+ess = jnp.square(jnp.nansum(w)) / jnp.nansum(jnp.square(w))
+ress = 100 * ess / len(w)
+print('estimate KL(q||p): {:.5f} - relative effective sample size: {:.2f}%'.format(kl, ress))
