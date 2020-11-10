@@ -88,7 +88,7 @@ def clip_and_zero_nans(g: jnp.ndarray) -> jnp.ndarray:
     g = jnp.clip(g, -1., 1.)
     return g
 
-def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, xon: jnp.ndarray) -> float:
+def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, xso: jnp.ndarray) -> float:
     """Loss function composed of the evidence lower bound and score matching
     loss.
 
@@ -101,19 +101,27 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
             the log-normal dequantizer.
         deq_fn: Function that computes the mean and scale of the dequantization
             distribution.
-        xon: Observations on O(n).
+        xso: Observations on SO(n).
 
     Returns:
         nelbo: The negative evidence lower bound.
 
     """
     rng, rng_rej, rng_elbo, rng_deq = random.split(rng, 4)
-    nelbo = negative_elbo(rng_elbo, bij_params, bij_fns, deq_params, deq_fn, xon)
-    nelbo = nelbo.mean()
+    rng_elboa, rng_elbob = random.split(rng, 2)
+    nelbo = 0.
+    nelbo += 0.5 * negative_elbo(rng_elboa, bij_params, bij_fns, deq_params, deq_fn, xso).mean()
+    nelbo += 0.5 * negative_elbo(rng_elbob, bij_params, bij_fns, deq_params, deq_fn, -xso).mean()
     return nelbo
 
 @partial(jit, static_argnums=(2, 4, 5, 6))
-def train(rng: random.PRNGKey, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_steps: int, lr: float) -> Tuple:
+def train(rng: random.PRNGKey,
+          bij_params: Sequence[jnp.ndarray],
+          bij_fns: Sequence[Callable],
+          deq_params: Sequence[jnp.ndarray],
+          deq_fn: Callable,
+          num_steps: int,
+          lr: float) -> Tuple:
     opt_init, opt_update, get_params = optimizers.adam(lr)
     def step(opt_state, it):
         rng_step = random.fold_in(rng, it)
@@ -159,28 +167,15 @@ xobs = xhaar[logu < la]
 print('number of rejection samples: {}'.format(len(xobs)))
 assert jnp.all(la < 0.)
 
+# Convert the samples on the orthogonal group into samples on SO(n).
+xobs = xobs * jnp.linalg.det(xobs)[..., jnp.newaxis, jnp.newaxis]
+
 # Train dequantization networks.
 (bij_params, deq_params), trace = train(rng_train, bij_params, bij_fns, deq_params, deq_fn, args.num_steps, args.lr)
 
-# num_is = 100
-# _, xon = ambient.sample(rng_mse, 10000, bij_params, bij_fns, args.num_dims)
-# xdeq, deq_log_dens = dequantization.dequantize(rng_kl, deq_params, deq_fn, xon, num_is)
-# amb_log_dens = vmap(ambient.log_prob, in_axes=(None, None, 0))(bij_params, bij_fns, xdeq)
-# log_approx = jspsp.logsumexp(amb_log_dens - deq_log_dens, axis=0) - jnp.log(num_is)
-# log_approx = jnp.clip(log_approx, -10., 10.)
-# log_target = log_dens(xon)
-# approx, target = jnp.exp(log_approx), jnp.exp(log_target)
-# w = target / approx
-# Z = jnp.nanmean(w)
-# kl = jnp.nanmean(log_approx - log_target) + jnp.log(Z)
-# ess = jnp.square(jnp.nansum(w)) / jnp.nansum(jnp.square(w))
-# ress = 100 * ess / len(w)
-# print('estimate KL(q||p): {:.5f} - relative effective sample size: {:.2f}%'.format(kl, ress))
-
 # Sample from the ambient space and compare moments.
-_, xon = ambient.sample(rng_mse, 1000000, bij_params, bij_fns, args.num_dims)
+_, xon = ambient.sample(rng_sample, len(xobs), bij_params, bij_fns, args.num_dims)
 xso = xon * jnp.linalg.det(xon)[..., jnp.newaxis, jnp.newaxis]
-xobs = xobs * jnp.linalg.det(xobs)[..., jnp.newaxis, jnp.newaxis]
 mean_mse = jnp.square(jnp.linalg.norm(xso.mean(0) - xobs.mean(0)))
 cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xso.reshape((-1, num_dims_sq)).T) - jnp.cov(xobs.reshape((-1, num_dims_sq)).T)))
 print('mean mse: {:.5f} - covariance mse: {:.5f}'.format(mean_mse, cov_mse))
@@ -230,4 +225,4 @@ for lh in leg.legendHandles:
 plt.tight_layout()
 plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
 plt.subplots_adjust(top=0.85)
-plt.savefig(os.path.join('images', 'orthogonal-{}.png'.format(args.density)))
+plt.savefig(os.path.join('images', 'orthogonal-marginal-{}.png'.format(args.density)))

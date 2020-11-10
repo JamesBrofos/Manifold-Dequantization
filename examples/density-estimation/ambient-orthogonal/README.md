@@ -10,9 +10,15 @@ The first example is for a unimodal distribution on O(n) which is a "Gaussian" c
 
 ![](images/orthogonal-unimodal.png)
 
-The second example is a multimodal distribution which has two modes. One is again at the identity and the other is at the pure reflection (the negative identity matrix). Here are the same metrics for this example.
+## Reduction versus Product Manifold
+
+The second example is to dequantize SO(n). We consider two approaches, which are to construct a distribution on O(n), which is plainly related to the distribution on SO(n). This is the reduction approach. Here are the metrics for this approach.
 
 ![](images/orthogonal-multimodal.png)
+
+The second approach is to formulate dequatization as an isomorphism of the ambient space and some product manifold structure. In the case, dequantization becomes marginalization. This yields the following metrics. We see that this second approach is marginally better.
+
+![](images/orthogonal-marginal-multimodal.png)
 
 ## Procrustes Problem
 
