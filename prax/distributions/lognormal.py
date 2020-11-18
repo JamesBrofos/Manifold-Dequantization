@@ -25,8 +25,7 @@ def logpdf(x: jnp.ndarray, mu:jnp.ndarray, sigma: jnp.ndarray) -> jnp.ndarray:
     log_x = jnp.log(x)
     return jspst.norm.logpdf(log_x, mu, sigma) - log_x
 
-def sample(rng: jnp.ndarray, mu: jnp.ndarray, sigma: jnp.ndarray, shape:
-           Sequence[int]) -> jnp.ndarray:
+def rvs(rng: jnp.ndarray, mu: jnp.ndarray, sigma: jnp.ndarray, shape: Sequence[int]) -> jnp.ndarray:
     """Compute samples from a log-normal distributon via reparameterization by
     expressing the log-normal as the exponentiation of an affine transformation
     of a standard normal.
