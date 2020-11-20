@@ -12,6 +12,7 @@ from jax.experimental import optimizers, stax
 
 from coordinates import ang2euclid, hsph2euclid, sph2euclid, sph2latlon
 from mobius import mobius_flow, mobius_log_prob
+from rejection_sampling import rejection_sampling
 from spline import rational_quadratic, grad_rational_quadratic
 
 
@@ -21,7 +22,7 @@ parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent lea
 parser.add_argument('--num-samples', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--num-spline', type=int, default=64, help='Number of intervals in spline flow')
 parser.add_argument('--num-mobius', type=int, default=32, help='Number of Mobius transforms in convex combination')
-parser.add_argument('--num-hidden', type=int, default=512, help='Number of hidden units used in the neural networks')
+parser.add_argument('--num-hidden', type=int, default=64, help='Number of hidden units used in the neural networks')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
@@ -295,6 +296,7 @@ rng = random.PRNGKey(0)
 rng, rng_netm, rng_netr = random.split(rng, 3)
 rng, rng_thetax, rng_thetay, rng_thetad = random.split(rng, 4)
 rng, rng_ms, rng_train = random.split(rng, 3)
+rng, rng_xobs = random.split(rng, 2)
 
 paramsr, netr = network_factory(rng_netr, 1, 3*args.num_spline-1, args.num_hidden)
 paramsm, netm = network_factory(rng_netm, 2, args.num_mobius*2, args.num_hidden)
@@ -317,6 +319,9 @@ xk, yk, deltak = spline_unconstrained_transform(thetax, thetay, thetad)
 
 (ra, rb, ang), (raunif, rbunif, angunif), (w, xl, yl, deltal) = mobius_spline_sample(rng_ms, num_samples, xk, yk, deltak, paramsm, netm, paramsr, netr)
 xsph = torus2sphere(ra, rb, ang)
+xobs = rejection_sampling(rng_xobs, len(xsph), xsph.shape[-1], sphere_density)
+mean_mse = jnp.square(jnp.linalg.norm(xsph.mean(0) - xobs.mean(0)))
+cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xsph.T) - jnp.cov(xobs.T)))
 log_approx = mobius_spline_log_prob(ra, raunif, rb, rbunif, ang, angunif, w, xk, yk, deltak, xl, yl, deltal)
 approx = jnp.exp(log_approx)
 target = sphere_density(xsph)
@@ -329,7 +334,7 @@ ress = 100 * ess / len(w)
 print('estimated KL(q || p) = {:.5f}'.format(kl))
 
 plt.figure()
-plt.title('KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(kl, ress))
+plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
 plt.plot(trace)
 plt.grid(linestyle=':')
 plt.xlabel('Gradient Descent Iteration')

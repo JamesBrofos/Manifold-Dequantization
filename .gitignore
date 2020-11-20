@@ -1,5 +1,4 @@
 # Repo ignores
-*.txt
 *.csv
 core.*
 video-frames/

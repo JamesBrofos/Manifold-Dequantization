@@ -467,7 +467,7 @@ elif num_dims == 4:
         ax.contourf(xx, yy, dens.reshape(xx.shape))
         ax.set_axis_off()
         ax.set_title('App.')
-    plt.suptitle('KL$(q\Vert p)$ = {:.5f} - Relative ESS: {:.2f}%'.format(kl, ress))
+    plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
     plt.tight_layout()
     ln = 'elbo' if args.elbo_loss else 'kl'
     plt.savefig(os.path.join('images', 'hyper-sphere-density-{}.png'.format(ln)))
