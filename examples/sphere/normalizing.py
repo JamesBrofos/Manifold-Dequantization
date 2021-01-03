@@ -10,6 +10,9 @@ from jax import lax, nn, random, tree_util
 from jax import grad, jacobian, jit, value_and_grad, vmap
 from jax.experimental import optimizers, stax
 
+import prax.manifolds as pm
+
+from distributions import embedded_sphere_density
 from rejection_sampling import rejection_sampling
 
 
@@ -23,49 +26,6 @@ parser.add_argument('--num-hidden', type=int, default=64, help='Number of hidden
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
 
-
-def ang2euclid(theta):
-    """Convert an angle into a point on the unit circle in the plane. The
-    conversion is made via polar coordinates with the radius fixed at one.
-
-    Args:
-        theta: The angle parameterizing a point on the circle.
-
-    Returns:
-        out: The point on the circle determined by the polar coordinate angle.
-
-    """
-    return jnp.stack([jnp.cos(theta), jnp.sin(theta)], axis=-1)
-
-def euclid2ang(x):
-    """Converts points on the circle embedded in the plane into an angular
-    representation in polar coordinates. Note that the output is shifted so
-    that angles lie in the interval [0, 2pi).
-
-    Args:
-        x: Observations on the circle.
-
-    Returns:
-        out: Angular representation of the input.
-
-    """
-    return jnp.arctan2(x[..., 1], x[..., 0]) + jnp.pi
-
-def sph2euclid(theta: jnp.ndarray, phi: jnp.ndarray) -> jnp.ndarray:
-    """Parameterize a point on the sphere as two angles in spherical coordinates.
-
-    Args:
-        theta: First angular coordinate.
-        phi: Second angular coordinate.
-
-    Returns:
-        out: The point on the sphere parameterized by the two angular
-            coordinates.
-
-    """
-    return jnp.array([jnp.sin(phi)*jnp.cos(theta),
-                      jnp.sin(phi)*jnp.sin(theta),
-                      jnp.cos(phi)]).T
 
 def mobius_circle(x: jnp.ndarray, w: jnp.ndarray) -> jnp.ndarray:
     """Implements the Mobius transformation on a circle embedded in the plane. The
@@ -103,9 +63,9 @@ def mobius_angle(theta: jnp.ndarray, w: jnp.ndarray) -> jnp.ndarray:
         out: The Mobius transformation as a transformation on angles.
 
     """
-    x = ang2euclid(theta)
+    x = pm.sphere.ang2euclid(theta)
     xp = mobius_circle(x, w)
-    return jnp.squeeze(euclid2ang(xp))
+    return jnp.squeeze(pm.sphere.euclid2ang(xp))
 
 def mobius_flow(theta: jnp.ndarray, w: jnp.ndarray) -> jnp.ndarray:
     """Following [1] the Mobius flow must have the property that the endpoints of
@@ -208,24 +168,6 @@ def grad_rational_quadratic(x: jnp.ndarray, xk: jnp.ndarray, yk: jnp.ndarray, de
     drq = jnp.square(sk) * (dkp * xisq + 2.0 * sk * xib + dk * jnp.square(1.0 - xi)) / jnp.square(sk + (dp - 2.0 * sk) * xib)
     return drq
 
-def embedded_sphere_density(xsph: jnp.ndarray) -> jnp.ndarray:
-    """Unnormalized multimodal density on the sphere.
-
-    Args:
-        xsph: Observations on the sphere at which to compute the unnormalized
-            density.
-
-    Returns:
-        out: The unnormalized density at the provided points on the sphere.
-
-    """
-    p = lambda x, mu: jnp.exp(10.*x.dot(mu))
-    mua = sph2euclid(0.7, 1.5)
-    mub = sph2euclid(-1., 1.)
-    muc = sph2euclid(0.6, 0.5)
-    mud = sph2euclid(-0.7, 4.)
-    return p(xsph, mua) + p(xsph, mub) + p(xsph, muc) + p(xsph, mud)
-
 def network_factory(rng: jnp.ndarray, num_in: int, num_out: int, num_hidden: int) -> Tuple:
     """Factory for producing neural networks and their parameterizations.
 
@@ -259,7 +201,7 @@ def torus2sphere(ra: jnp.ndarray, ang: jnp.ndarray) -> jnp.ndarray:
         out: Conversion of the inputs on a torus into a sphere.
 
     """
-    circ = ang2euclid(ang)
+    circ = pm.sphere.ang2euclid(ang)
     sph = jnp.sqrt(1. - jnp.square(ra[..., jnp.newaxis])) * circ
     sph = jnp.concatenate((sph, ra[..., jnp.newaxis]), axis=-1)
     return sph
@@ -407,7 +349,7 @@ def train(rng: jnp.ndarray,
 
 
 # Set random number generation seeds.
-rng = random.PRNGKey(0)
+rng = random.PRNGKey(args.seed)
 rng, rng_netm = random.split(rng, 2)
 rng, rng_thetax, rng_thetay, rng_thetad = random.split(rng, 4)
 rng, rng_ms, rng_train = random.split(rng, 3)
@@ -445,4 +387,4 @@ ress = 100 * ess / len(w)
 xobs = rejection_sampling(rng_xobs, len(xsph), 3, embedded_sphere_density)
 mean_mse = jnp.square(jnp.linalg.norm(xsph.mean(0) - xobs.mean(0)))
 cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xsph.T) - jnp.cov(xobs.T)))
-print('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
+print('normalizing - Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))

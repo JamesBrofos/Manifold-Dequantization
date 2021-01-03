@@ -27,7 +27,7 @@ parser.add_argument('--lr', type=float, default=1e-3, help='Gradient descent lea
 parser.add_argument('--num-batch', type=int, default=100, help='Number of samples per batch')
 parser.add_argument('--elbo-loss', type=int, default=1, help='Flag to indicate using the ELBO loss')
 parser.add_argument('--num-importance', type=int, default=20, help='Number of importance samples to draw during training; if the ELBO loss is used, this argument is ignored')
-parser.add_argument('--num-hidden', type=int, default=35, help='Number of hidden units used in the neural networks')
+parser.add_argument('--num-hidden', type=int, default=70, help='Number of hidden units used in the neural networks')
 parser.add_argument('--num-realnvp', type=int, default=3, help='Number of RealNVP bijectors to employ')
 parser.add_argument('--seed', type=int, default=0, help='Pseudo-random number generator seed')
 args = parser.parse_args()
@@ -336,7 +336,7 @@ def train(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence
 
 
 # Number of dimensions of Euclidean embedding space.
-num_dims = 3
+num_dims = 4
 
 # Set random number generation seeds.
 rng = random.PRNGKey(args.seed)
@@ -398,26 +398,38 @@ del w, Z, log_approx, approx, log_target, target
 method = 'dequantization ({})'.format('ELBO' if args.elbo_loss else 'KL')
 print('{} - Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - KL$(p\Vert q)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(method, mean_mse, cov_mse, klqp, klpq, ress))
 
+
 # Visualize the target density and the approximation.
 if args.seed == 0:
-    num_lin = 200
-    theta = jnp.linspace(-jnp.pi, jnp.pi, num_lin)[1:-1]
-    phi = jnp.linspace(-jnp.pi, jnp.pi, num_lin)[1:-1]
-    xx, yy = jnp.meshgrid(theta, phi)
-    grid = jnp.vstack((xx.ravel(), yy.ravel())).T
-    psph = pm.sphere.sph2euclid(grid[..., 0], grid[..., 1])
-    approx = importance_density(rng_mw, bij_params, bij_fns, deq_params, deq_fn, 5000, psph)
-    target = embedded_sphere_density(psph)
-    lat, lon = pm.sphere.sph2latlon(psph)
-    fig = plt.figure(figsize=(10, 3.5))
-    ax = fig.add_subplot(121, projection='mollweide')
-    ax.scatter(lon, lat, c=approx, vmin=0., vmax=jnp.quantile(approx, 0.99), cmap=plt.cm.jet)
-    ax.set_axis_off()
-    ax.set_title('Approximate Density')
-    ax = fig.add_subplot(122, projection='mollweide')
-    ax.scatter(lon, lat, c=target, vmin=0., cmap=plt.cm.jet)
-    ax.set_axis_off()
-    ax.set_title('Target Density')
-    plt.tight_layout()
+    num_slices = 8
+    fig = plt.figure(figsize=(10, 1), constrained_layout=True)
+    for i, gamma in enumerate(jnp.linspace(0., jnp.pi, num_slices+2)[1:-1]):
+        theta = jnp.linspace(-jnp.pi, jnp.pi)[1:-1]
+        phi = jnp.linspace(-jnp.pi / 2, jnp.pi / 2)[1:-1]
+        xx, yy = jnp.meshgrid(theta, phi)
+        grid = jnp.vstack((xx.ravel(), yy.ravel())).T
+        G = gamma * jnp.ones_like(grid[..., 0])
+        psph = pm.sphere.hsph2euclid(G, grid[..., 0], grid[..., 1])
+        ax = fig.add_subplot(1, num_slices, i+1, projection='mollweide')
+        ax.contourf(xx, yy, embedded_sphere_density(psph).reshape(xx.shape), cmap=plt.cm.jet)
+        ax.set_axis_off()
     ln = 'elbo' if args.elbo_loss else 'kl'
-    plt.savefig(os.path.join('images', 'dequantization-{}-num-importance-{}.png'.format(ln, args.num_importance)))
+    plt.savefig(os.path.join('images', 'hyper-sphere-target-density-{}.png'.format(ln)))
+
+if args.seed == 0:
+    num_slices = 8
+    fig = plt.figure(figsize=(10, 1), constrained_layout=True)
+    for i, gamma in enumerate(jnp.linspace(0., jnp.pi, num_slices+2)[1:-1]):
+        theta = jnp.linspace(-jnp.pi, jnp.pi)[1:-1]
+        phi = jnp.linspace(-jnp.pi / 2, jnp.pi / 2)[1:-1]
+        xx, yy = jnp.meshgrid(theta, phi)
+        grid = jnp.vstack((xx.ravel(), yy.ravel())).T
+        G = gamma * jnp.ones_like(grid[..., 0])
+        psph = pm.sphere.hsph2euclid(G, grid[..., 0], grid[..., 1])
+        dens = importance_density(rng_mw, bij_params, bij_fns, deq_params, deq_fn, 5000, psph)
+        ax = fig.add_subplot(1, num_slices, i+1, projection='mollweide')
+        ax.contourf(xx, yy, dens.reshape(xx.shape), cmap=plt.cm.jet)
+        ax.set_axis_off()
+    ln = 'elbo' if args.elbo_loss else 'kl'
+    plt.savefig(os.path.join('images', 'hyper-sphere-approx-density-{}.png'.format(ln)))
+
