@@ -1,0 +1,4 @@
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python sphere.py --density sphere --num-hidden 35 --num-realnvp 3 --elbo-loss 0 --num-steps 20000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python sphere.py --density sphere --num-hidden 35 --num-realnvp 3 --elbo-loss 1 --num-steps 20000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python sphere.py --density hyper --num-hidden 70 --num-realnvp 3 --elbo-loss 0 --num-steps 20000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python sphere.py --density hyper --num-hidden 70 --num-realnvp 3 --elbo-loss 1 --num-steps 20000
