@@ -430,9 +430,6 @@ if args.seed == 0:
         ax = fig.add_subplot(1, num_slices, i+1, projection='mollweide')
         ax.contourf(xx, yy, dens.reshape(xx.shape), cmap=plt.cm.jet)
         ax.set_axis_off()
-        ax.set_title('App.')
-    plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, kl, ress))
-    plt.tight_layout()
     ln = 'elbo' if args.elbo_loss else 'kl'
     plt.savefig(os.path.join('images', 'hyper-sphere-approx-density-{}.png'.format(ln)))
 

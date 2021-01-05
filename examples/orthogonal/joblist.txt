@@ -1,0 +1,40 @@
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 2
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 3
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 4
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 5
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 6
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 7
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 8
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 9
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 0 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 1 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 2 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 3 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 4 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 5 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 6 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 7 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 8 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python orthogonal.py --num-steps 40000 --density multimodal --num-ambient 512 --num-dequantization 128 --seed 9 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 0 --num-steps 40000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 1 --num-steps 40000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 2 --num-steps 40000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 3 --num-steps 40000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 4 --num-steps 40000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 5 --num-steps 40000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 6 --num-steps 40000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 7 --num-steps 40000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 8 --num-steps 40000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 9 --num-steps 40000
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 0 --num-steps 40000 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 1 --num-steps 40000 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 2 --num-steps 40000 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 3 --num-steps 40000 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 4 --num-steps 40000 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 5 --num-steps 40000 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 6 --num-steps 40000 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 7 --num-steps 40000 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 8 --num-steps 40000 --num-importance 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python procrustes.py --seed 9 --num-steps 40000 --num-importance 1 --elbo-loss 0
