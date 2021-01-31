@@ -51,7 +51,7 @@ class Results:
 
 
 print('method,mean_mse,cov_mse,klqp,klpq,ress')
-odir = os.path.join('..', 'output', '*.log')
+odir = os.path.join('..', 'output', 'sphere-12624934*.log')
 files = glob.glob(odir)
 
 for fn in files:

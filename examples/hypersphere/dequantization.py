@@ -58,8 +58,8 @@ def importance_log_density(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], 
     is_log_dens = jspsp.logsumexp(amb_log_dens - deq_log_dens, axis=0) - jnp.log(num_is)
     return is_log_dens
 
-@partial(jit, static_argnums=(2, 4, 5))
-def importance_density(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_is: int, xsph: jnp.ndarray) -> jnp.ndarray:
+@partial(jit, static_argnums=(3, ))
+def importance_density(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], deq_params: Sequence[jnp.ndarray], num_is: int, xsph: jnp.ndarray) -> jnp.ndarray:
     """Compute the estimate of the density on the sphere via importance sampling.
     The calculation is encapsulated in a scan so that a large number of
     importance samples may be used without running out of memory.
@@ -299,8 +299,8 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
         log_target = jnp.log(embedded_sphere_density(xsph))
         return jnp.mean(log_target - log_is)
 
-@partial(jit, static_argnums=(2, 4, 5, 7))
-def train(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_steps: int, lr: float, num_samples: int) -> Tuple:
+@partial(jit, static_argnums=(3, 5))
+def train(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], deq_params: Sequence[jnp.ndarray], num_steps: int, lr: float, num_samples: int) -> Tuple:
     """Train the ambient flow with the combined loss function.
 
     Args:
@@ -368,7 +368,7 @@ num_params = num_bij_params + num_deq_params
 print('dequantization parameters: {} - ambient parameters: {} - number of parameters: {}'.format(num_deq_params, num_bij_params, num_params))
 
 # Estimate parameters of the dequantizer and ambient flow.
-(bij_params, deq_params), trace = train(rng_train, bij_params, bij_fns, deq_params, deq_fn, args.num_steps, args.lr, args.num_batch)
+(bij_params, deq_params), trace = train(rng_train, bij_params, deq_params, args.num_steps, args.lr, args.num_batch)
 
 # Sample using dequantization and rejection sampling.
 xamb, xsph = sample_ambient(rng_xamb, 100000, bij_params, bij_fns, num_dims)
@@ -377,7 +377,7 @@ xobs = rejection_sampling(rng_xobs, len(xsph), num_dims, embedded_sphere_density
 # Compute comparison statistics.
 mean_mse = jnp.square(jnp.linalg.norm(xsph.mean(0) - xobs.mean(0)))
 cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xsph.T) - jnp.cov(xobs.T)))
-approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 1000, xsph)
+approx = importance_density(rng_kl, bij_params, deq_params, 1000, xsph)
 target = embedded_sphere_density(xsph)
 w = target / approx
 Z = jnp.nanmean(w)
@@ -387,7 +387,7 @@ klqp = jnp.nanmean(log_approx - log_target) + jnp.log(Z)
 ess = jnp.square(jnp.nansum(w)) / jnp.nansum(jnp.square(w))
 ress = 100 * ess / len(w)
 del w, Z, log_approx, approx, log_target, target
-approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 1000, xobs)
+approx = importance_density(rng_kl, bij_params, deq_params, 1000, xobs)
 target = embedded_sphere_density(xobs)
 w = approx / target
 Z = jnp.nanmean(w)
@@ -426,7 +426,7 @@ if args.seed == 0:
         grid = jnp.vstack((xx.ravel(), yy.ravel())).T
         G = gamma * jnp.ones_like(grid[..., 0])
         psph = pm.sphere.hsph2euclid(G, grid[..., 0], grid[..., 1])
-        dens = importance_density(rng_mw, bij_params, bij_fns, deq_params, deq_fn, 5000, psph)
+        dens = importance_density(rng_mw, bij_params, deq_params, 5000, psph)
         ax = fig.add_subplot(1, num_slices, i+1, projection='mollweide')
         ax.contourf(xx, yy, dens.reshape(xx.shape), cmap=plt.cm.jet)
         ax.set_axis_off()

@@ -1,3 +1,33 @@
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 0 --elbo-loss 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 1 --elbo-loss 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 2 --elbo-loss 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 3 --elbo-loss 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 4 --elbo-loss 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 5 --elbo-loss 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 6 --elbo-loss 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 7 --elbo-loss 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 8 --elbo-loss 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 9 --elbo-loss 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 0 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 1 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 2 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 3 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 4 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 5 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 6 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 7 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 8 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python deqode.py --seed 9 --elbo-loss 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python manode.py --seed 0
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python manode.py --seed 1
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python manode.py --seed 2
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python manode.py --seed 3
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python manode.py --seed 4
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python manode.py --seed 5
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python manode.py --seed 6
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python manode.py --seed 7
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python manode.py --seed 8
+singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python manode.py --seed 9
 singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --elbo-loss 1 --seed 0
 singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --elbo-loss 1 --seed 1
 singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --elbo-loss 1 --seed 2

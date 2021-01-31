@@ -64,8 +64,8 @@ def importance_log_density(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], 
     is_log_dens = jspsp.logsumexp(amb_log_dens - deq_log_dens, axis=0) - jnp.log(num_is)
     return is_log_dens
 
-@partial(jit, static_argnums=(2, 4, 5))
-def importance_density(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_is: int, xtor: jnp.ndarray) -> jnp.ndarray:
+@partial(jit, static_argnums=(3, ))
+def importance_density(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], deq_params: Sequence[jnp.ndarray], num_is: int, xtor: jnp.ndarray) -> jnp.ndarray:
     """Compute the estimate of the density on the torus via importance sampling.
     The calculation is encapsulated in a scan so that a large number of
     importance samples may be used without running out of memory.
@@ -322,8 +322,8 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
         log_target = jnp.log(torus_density(xang))
         return jnp.mean(log_target - log_is)
 
-@partial(jit, static_argnums=(2, 4, 5, 7))
-def train(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_steps: int, lr: float, num_samples: int) -> Tuple:
+@partial(jit, static_argnums=(3, 5))
+def train(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], deq_params: Sequence[jnp.ndarray], num_steps: int, lr: float, num_samples: int) -> Tuple:
     """Train the ambient flow with the combined loss function.
 
     Args:
@@ -387,7 +387,7 @@ num_params = num_bij_params + num_deq_params
 print('dequantization parameters: {} - ambient parameters: {} - number of parameters: {}'.format(num_deq_params, num_bij_params, num_params))
 
 # Estimate parameters of the dequantizer and ambient flow.
-(bij_params, deq_params), trace = train(rng_train, bij_params, bij_fns, deq_params, deq_fn, args.num_steps, args.lr, args.num_batch)
+(bij_params, deq_params), trace = train(rng_train, bij_params, deq_params, args.num_steps, args.lr, args.num_batch)
 
 # Sample from the learned distribution.
 xamb, xtor = sample_ambient(rng_xamb, 100000, bij_params, bij_fns, 4)
@@ -398,7 +398,7 @@ xobs = pm.torus.euclid2ang(pm.torus.ang2euclid(xobs))
 # Compute comparison statistics.
 mean_mse = jnp.square(jnp.linalg.norm(xang.mean(0) - xobs.mean(0)))
 cov_mse = jnp.square(jnp.linalg.norm(jnp.cov(xang.T) - jnp.cov(xobs.T)))
-approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 1000, xtor)
+approx = importance_density(rng_kl, bij_params, deq_params, 1000, xtor)
 target = embedded_torus_density(xtor, torus_density)
 w = target / approx
 Z = jnp.mean(w)
@@ -408,7 +408,7 @@ klqp = jnp.mean(log_approx - log_target) + jnp.log(Z)
 ess = jnp.square(jnp.sum(w)) / jnp.sum(jnp.square(w))
 ress = 100 * ess / len(w)
 del w, Z, log_approx, approx, log_target, target
-approx = importance_density(rng_kl, bij_params, bij_fns, deq_params, deq_fn, 1000, pm.torus.ang2euclid(xobs))
+approx = importance_density(rng_kl, bij_params, deq_params, 1000, pm.torus.ang2euclid(xobs))
 target = embedded_torus_density(pm.torus.ang2euclid(xobs), torus_density)
 w = approx / target
 Z = jnp.mean(w)
@@ -424,7 +424,7 @@ lin = jnp.linspace(-jnp.pi, jnp.pi)
 xx, yy = jnp.meshgrid(lin, lin)
 theta = jnp.vstack((xx.ravel(), yy.ravel())).T
 ptor = pm.torus.ang2euclid(theta)
-prob = importance_density(rng_is, bij_params, bij_fns, deq_params, deq_fn, 10000, ptor)
+prob = importance_density(rng_is, bij_params, deq_params, 10000, ptor)
 aprob = torus_density(theta)
 
 # Visualize learned distribution.
