@@ -4,7 +4,7 @@ We investigate dequantization as a method for matching distributions on manifold
 
 ## Reproducing Results
 
-Every directory in the `examples` folder contains a file called `joblist.txt`. Each line of this file corresponds to a different parameter configuration or comparison that we report in our paper.
+Every directory in the `examples` folder contains a file called `joblist.txt`. Each line of this file corresponds to a different parameter configuration or comparison that we report in our paper. We use [dSQ](https://github.com/ycrc/dSQ) in order to run these jobs in a cluster environment.
 
 ## Computational Environment
 
