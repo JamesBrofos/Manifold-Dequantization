@@ -8,3 +8,4 @@ To reproduce these experiments, execute:
 ```
 dSQ --jobfile joblist.txt -p gpu --gres=gpu:1 --gres-flags=enforce-binding -t 24:00:00 -c 10 --job-name torus -o output/torus-%A-%J.log --submit --suppress-stats-file
 ```
+One may also invoke any single line job from `joblist.txt` in order to run that experiment.
