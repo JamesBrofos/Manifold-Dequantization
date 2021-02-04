@@ -12,3 +12,4 @@ We use Singularity to manage our computational environment. The definition file 
 ```
 singularity build --remote manifold-dequantization.sif manifold-dequantization.def
 ```
+The path to `manifold-dequantization.sif` is assumed to be in the environment variable `$SINGULARITY_CONTAINERS`.
