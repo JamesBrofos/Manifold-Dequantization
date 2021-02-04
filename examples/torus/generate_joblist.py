@@ -1,4 +1,4 @@
-job = 'singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python {}.py --num-steps {} --density {} --seed {}'
+job = 'singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python {}.py --num-steps {} --density {} --seed {}'
 
 with open('joblist.txt', 'w') as f:
     for num_steps in [10000]:

@@ -1,120 +1,120 @@
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 0 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 0 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 1 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 1 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 2
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 2
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 2 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 2 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 3
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 3
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 3 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 3 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 4
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 4
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 4 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 4 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 5
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 5
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 5 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 5 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 6
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 6
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 6 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 6 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 7
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 7
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 7 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 7 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 8
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 8
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 8 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 8 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 9
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 9
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 9 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 9 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 0 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 0 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 1 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 1 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 2
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 2
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 2 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 2 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 3
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 3
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 3 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 3 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 4
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 4
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 4 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 4 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 5
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 5
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 5 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 5 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 6
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 6
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 6 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 6 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 7
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 7
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 7 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 7 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 8
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 8
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 8 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 8 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 9
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 9
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 9 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 9 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 0 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 0 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 1 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 1 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 2
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 2
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 2 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 2 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 3
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 3
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 3 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 3 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 4
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 4
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 4 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 4 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 5
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 5
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 5 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 5 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 6
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 6
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 6 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 6 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 7
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 7
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 7 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 7 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 8
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 8
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 8 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 8 --elbo-loss 1
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 9
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 9
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 9 --elbo-loss 0
-singularity exec --nv ~/scratch60/singularity-containers/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 9 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 0 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 0 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 1 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 1 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 2
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 2
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 2 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 2 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 3
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 3
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 3 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 3 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 4
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 4
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 4 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 4 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 5
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 5
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 5 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 5 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 6
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 6
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 6 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 6 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 7
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 7
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 7 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 7 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 8
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 8
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 8 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 8 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density unimodal --seed 9
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density unimodal --seed 9
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 9 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density unimodal --seed 9 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 0 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 0 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 1 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 1 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 2
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 2
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 2 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 2 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 3
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 3
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 3 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 3 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 4
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 4
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 4 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 4 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 5
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 5
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 5 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 5 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 6
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 6
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 6 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 6 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 7
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 7
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 7 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 7 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 8
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 8
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 8 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 8 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density multimodal --seed 9
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density multimodal --seed 9
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 9 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density multimodal --seed 9 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 0 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 0 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 1 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 1 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 2
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 2
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 2 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 2 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 3
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 3
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 3 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 3 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 4
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 4
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 4 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 4 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 5
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 5
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 5 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 5 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 6
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 6
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 6 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 6 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 7
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 7
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 7 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 7 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 8
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 8
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 8 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 8 --elbo-loss 1
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python normalizing.py --num-steps 10000 --density correlated --seed 9
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python direct.py --num-steps 10000 --density correlated --seed 9
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 9 --elbo-loss 0
+singularity exec --nv $SINGULARITY_CONTAINERS/manifold-dequantization.sif python dequantization.py --num-steps 10000 --density correlated --seed 9 --elbo-loss 1
