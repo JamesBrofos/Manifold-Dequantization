@@ -4,6 +4,8 @@ core.*
 video-frames/
 *.out
 *.npz
+images/
+results/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
