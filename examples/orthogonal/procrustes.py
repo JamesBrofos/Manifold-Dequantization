@@ -116,8 +116,8 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
         return jnp.mean(log_target - log_is)
 
 
-@partial(jit, static_argnums=(2, 4, 5, 6))
-def train(rng: random.PRNGKey, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[Callable], deq_params: Sequence[jnp.ndarray], deq_fn: Callable, num_steps: int, lr: float) -> Tuple:
+@partial(jit, static_argnums=(3, 4))
+def train(rng: random.PRNGKey, bij_params: Sequence[jnp.ndarray], deq_params: Sequence[jnp.ndarray], num_steps: int, lr: float) -> Tuple:
     opt_init, opt_update, get_params = optimizers.adam(lr)
     def step(opt_state, it):
         rng_step = random.fold_in(rng, it)
@@ -197,7 +197,7 @@ if not args.elbo_loss:
     deq_params = tree_util.tree_map(lambda x: x / 10., deq_params)
 
 # Train dequantization networks.
-(bij_params, deq_params), trace = train(rng_train, bij_params, bij_fns, deq_params, deq_fn, args.num_steps, args.lr)
+(bij_params, deq_params), trace = train(rng_train, bij_params, deq_params, args.num_steps, args.lr)
 
 # Compute an estimate of the KL divergence.
 num_is = 150
@@ -227,31 +227,31 @@ method = 'procrustes ({})'.format('ELBO' if args.elbo_loss else 'KL')
 print('{} - Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - KL$(p\Vert q)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(method, mean_mse, cov_mse, klqp, klpq, ress))
 
 
-# Construct visualization of the Procrustes problem.
-pro = data@transp(xon)
-target = data@O.T
+# # Construct visualization of the Procrustes problem.
+# pro = data@transp(xon)
+# target = data@O.T
 
-fig = plt.figure(figsize=(10, 4))
-ax = fig.add_subplot(121, projection='3d')
-ax.set_title('Procrustes Posterior')
-for i in range(1000):
-    ax.plot(pro[i, :, 0], pro[i, :, 1], pro[i, :, 2], '.', alpha=0.05, color='tab:blue', label='Samples' if i == 0 else '_')
+# fig = plt.figure(figsize=(10, 4))
+# ax = fig.add_subplot(121, projection='3d')
+# ax.set_title('Procrustes Posterior')
+# for i in range(1000):
+#     ax.plot(pro[i, :, 0], pro[i, :, 1], pro[i, :, 2], '.', alpha=0.05, color='tab:blue', label='Samples' if i == 0 else '_')
 
-ax.plot(target[:, 0], target[:, 1], target[:, 2], '.', label='Target', color='tab:orange')
-leg = ax.legend()
-for lh in leg.legendHandles:
-    lh._legmarker.set_alpha(1)
+# ax.plot(target[:, 0], target[:, 1], target[:, 2], '.', label='Target', color='tab:orange')
+# leg = ax.legend()
+# for lh in leg.legendHandles:
+#     lh._legmarker.set_alpha(1)
 
-ax.grid(linestyle=':')
-lim = 4.
-ax.set_xlim((-lim, lim))
-ax.set_ylim((-lim, lim))
-ax.set_zlim((-lim, lim))
-ax = fig.add_subplot(122)
-ax.plot(trace)
-ax.grid(linestyle=':')
-ax.set_title('ELBO Loss')
-ax.set_xlabel('Number of Iterations')
-plt.suptitle('KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(klqp, ress))
-plt.subplots_adjust(top=0.85)
-plt.savefig(os.path.join('images', 'procrustes.png'))
+# ax.grid(linestyle=':')
+# lim = 4.
+# ax.set_xlim((-lim, lim))
+# ax.set_ylim((-lim, lim))
+# ax.set_zlim((-lim, lim))
+# ax = fig.add_subplot(122)
+# ax.plot(trace)
+# ax.grid(linestyle=':')
+# ax.set_title('ELBO Loss')
+# ax.set_xlabel('Number of Iterations')
+# plt.suptitle('KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(klqp, ress))
+# plt.subplots_adjust(top=0.85)
+# plt.savefig(os.path.join('images', 'procrustes.png'))

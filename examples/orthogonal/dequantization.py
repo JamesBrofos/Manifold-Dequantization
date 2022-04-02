@@ -26,7 +26,8 @@ def tril_factory(diag, tril):
     """
     n = diag.size
     B = jnp.zeros((n, n))
-    B = ops.index_update(B, jnp.tril_indices(n, -1), tril)
+    # B = ops.index_update(B, jnp.tril_indices(n, -1), tril)
+    B = B.at[jnp.tril_indices(n, -1)].set(tril)
     L = B + jnp.diag(diag)
     return L
 

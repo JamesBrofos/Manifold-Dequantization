@@ -22,7 +22,7 @@ def uqr(A: jnp.ndarray) -> Tuple[jnp.ndarray]:
     """
     Q, R = jnp.linalg.qr(A)
     signs = 2 * (jnp.diag(R) >= 0) - 1
-    Q = Q * signs[:, jnp.newaxis]
+    Q = Q * signs[jnp.newaxis, :]
     R = R * signs[..., jnp.newaxis]
     return Q, R
 

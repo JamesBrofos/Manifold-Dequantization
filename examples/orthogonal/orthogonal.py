@@ -131,12 +131,12 @@ def loss(rng: jnp.ndarray, bij_params: Sequence[jnp.ndarray], bij_fns: Sequence[
         return jnp.mean(log_target - log_is)
 
 
-@partial(jit, static_argnums=(2, 4, 5, 6))
+@partial(jit, static_argnums=(3, 4))
 def train(rng: random.PRNGKey,
           bij_params: Sequence[jnp.ndarray],
-          bij_fns: Sequence[Callable],
+          # bij_fns: Sequence[Callable],
           deq_params: Sequence[jnp.ndarray],
-          deq_fn: Callable,
+          # deq_fn: Callable,
           num_steps: int,
           lr: float) -> Tuple:
     opt_init, opt_update, get_params = optimizers.adam(lr)
@@ -182,18 +182,17 @@ if not args.elbo_loss:
 # Sample from a target distribution using rejection sampling
 xhaar = pd.orthogonal.haar.rvs(rng_haar, 5000000, args.num_dims)
 xhaar = xhaar * jnp.linalg.det(xhaar)[..., jnp.newaxis, jnp.newaxis]
-lprop = 2 * pd.orthogonal.haar.logpdf(xhaar)
+lprop = pd.orthogonal.haar.logpdf(xhaar) + jnp.log(2.0)
 ld = log_dens(xhaar)
-lm = -lprop[0] - ld.max() + 0.5
-la = ld - lprop - lm
+lm = ld.max() + 0.5
+la = ld - lm
 logu = jnp.log(random.uniform(rng_acc, [len(xhaar)]))
 xobs = xhaar[logu < la]
 print('number of rejection samples: {}'.format(len(xobs)))
 assert jnp.all(la < 0.)
 
-
 # Train dequantization networks.
-(bij_params, deq_params), trace = train(rng_train, bij_params, bij_fns, deq_params, deq_fn, args.num_steps, args.lr)
+(bij_params, deq_params), trace = train(rng_train, bij_params, deq_params, args.num_steps, args.lr)
 
 # Sample from the ambient space and compare moments.
 rng_sample_a, rng_sample_b = random.split(rng_sample, 2)
@@ -228,26 +227,26 @@ klpq = jnp.nanmean(log_target - log_approx) + jnp.log(Z)
 method = 'orthogonal ({})'.format('ELBO' if args.elbo_loss else 'KL')
 print('{} - Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - KL$(p\Vert q)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(method, mean_mse, cov_mse, klqp, klpq, ress))
 
-# Visualize the action of the rejection and dequantization samples on a vector.
-vec = jnp.ones((args.num_dims, ))
-xsovec = xso@vec
-xobsvec = xobs@vec
-num_obs = 2000
+# # Visualize the action of the rejection and dequantization samples on a vector.
+# vec = jnp.ones((args.num_dims, ))
+# xsovec = xso@vec
+# xobsvec = xobs@vec
+# num_obs = 2000
 
-fig = plt.figure(figsize=(10, 4))
-ax = fig.add_subplot(121)
-ax.plot(trace, '-')
-ax.set_ylabel('ELBO Loss')
-ax.grid(linestyle=':')
-ax = fig.add_subplot(122, projection='3d')
-ax.plot(xobsvec[:num_obs, 0], xobsvec[:num_obs, 1], xobsvec[:num_obs, 2], '.', alpha=0.1, label='Rejection Samples')
-ax.plot(xsovec[:num_obs, 0], xsovec[:num_obs, 1], xsovec[:num_obs, 2], '.', alpha=0.1, label='Dequantization Samples')
-ax.grid(linestyle=':')
-leg = ax.legend()
-for lh in leg.legendHandles:
-    lh._legmarker.set_alpha(1)
+# fig = plt.figure(figsize=(10, 4))
+# ax = fig.add_subplot(121)
+# ax.plot(trace, '-')
+# ax.set_ylabel('ELBO Loss')
+# ax.grid(linestyle=':')
+# ax = fig.add_subplot(122, projection='3d')
+# ax.plot(xobsvec[:num_obs, 0], xobsvec[:num_obs, 1], xobsvec[:num_obs, 2], '.', alpha=0.1, label='Rejection Samples')
+# ax.plot(xsovec[:num_obs, 0], xsovec[:num_obs, 1], xsovec[:num_obs, 2], '.', alpha=0.1, label='Dequantization Samples')
+# ax.grid(linestyle=':')
+# leg = ax.legend()
+# # for lh in leg.legendHandles:
+# #     lh._legmarker.set_alpha(1)
 
-plt.tight_layout()
-plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, klqp, ress))
-plt.subplots_adjust(top=0.85)
-plt.savefig(os.path.join('images', 'orthogonal-marginal-{}.png'.format(args.density)))
+# plt.tight_layout()
+# plt.suptitle('Mean MSE: {:.5f} - Covariance MSE: {:.5f} - KL$(q\Vert p)$ = {:.5f} - Rel. ESS: {:.2f}%'.format(mean_mse, cov_mse, klqp, ress))
+# plt.subplots_adjust(top=0.85)
+# plt.savefig(os.path.join('images', 'orthogonal-marginal-{}.png'.format(args.density)))
